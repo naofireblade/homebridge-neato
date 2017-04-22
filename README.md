@@ -35,6 +35,6 @@ Add the following information to your config file. Change the values for name, e
 
 # Tested robots
 
-- BotVac Connected Firmware 2.2.0
+- BotVac Connected (Firmware 2.2.0)
 
 If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues/new) your experience with this plugin.

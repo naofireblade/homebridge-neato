@@ -1,5 +1,6 @@
 "use strict";
 var inherits = require('util').inherits;
+var debug = require('debug')('homebridge-neato');
 var botvac = require('node-botvac');
 
 var Service, Characteristic;
@@ -38,9 +39,12 @@ NeatoVacuumRobot.prototype = {
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('set', this.clean.bind(this));
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('get', this.getClean.bind(this));
 
-		this.vacuumRobotDockService = new Service.Switch(this.name + " Dock", "dock");
-		this.vacuumRobotDockService.getCharacteristic(Characteristic.On).on('set', this.dock.bind(this));
-		this.vacuumRobotDockService.getCharacteristic(Characteristic.On).on('get', this.getDock.bind(this));
+		this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
+		this.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).on('set', this.dock.bind(this));
+		this.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).on('get', this.getCanGoToDock.bind(this));
+
+		this.vacuumRobotDockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
+		this.vacuumRobotDockStateService.getCharacteristic(Characteristic.OccupancyDetected).on('get', this.getDockState.bind(this));
 
 		this.vacuumRobotEcoService = new Service.Switch(this.name + " Eco Mode", "eco");
 		this.vacuumRobotEcoService.getCharacteristic(Characteristic.On).on('set', this.eco.bind(this));
@@ -54,7 +58,7 @@ NeatoVacuumRobot.prototype = {
 		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
 		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
 
-		return [this.informationService, this.vacuumRobotCleanService, this.vacuumRobotDockService, this.vacuumRobotEcoService,
+		return [this.informationService, this.vacuumRobotCleanService, this.vacuumRobotGoToDockService, this.vacuumRobotDockStateService, this.vacuumRobotEcoService,
 			this.vacuumRobotScheduleService, this.vacuumRobotBatteryService];
 	},
 
@@ -62,15 +66,14 @@ NeatoVacuumRobot.prototype = {
 		let that = this;
 		if (on) {
 			this.getState(function (error, result) {
-				that.log(that.robot);
 				if (that.robot.canResume === true) {
-					that.log("Resume cleaning");
+					debug("Resume cleaning");
 					that.robot.resumeCleaning(function (error, result) {
 						that.log(result);
 					});
 				}
 				else {
-					that.log("Start cleaning");
+					debug("Start cleaning");
 					that.robot.startCleaning(that.robot.eco, function (error, result) {
 						that.log(result);
 					});
@@ -78,7 +81,7 @@ NeatoVacuumRobot.prototype = {
 			});
 		}
 		else {
-			this.log("Pause cleaning");
+			debug("Pause cleaning");
 			this.robot.pauseCleaning(false, function (error, result) {
 				that.log(result);
 			});
@@ -88,9 +91,8 @@ NeatoVacuumRobot.prototype = {
 
 	dock: function (on, callback) {
 		let that = this;
-		that.log(that.robot);
 		if (on) {
-			that.log("Send to dock");
+			debug("Go to dock");
 			that.robot.sendToBase(false, function (error, result) {
 				that.log(result);
 			});
@@ -99,22 +101,23 @@ NeatoVacuumRobot.prototype = {
 	},
 
 	eco: function (on, callback) {
-		this.log(on ? "Enable eco mode" : "Disable eco mode");
+		debug(on ? "Enable eco mode" : "Disable eco mode");
 		this.robot.eco = on;
 		callback();
 	},
 
 	schedule: function (on, callback) {
+		let that = this;
 		if (on) {
-			this.log("Enable schedule");
+			debug("Enable schedule");
 			this.robot.enableSchedule(false, function (error, result) {
-				onsole.log(result);
+				that.log(result);
 			}); 
 		}
 		else {
-			this.log("Disable schedule");
+			debug("Disable schedule");
 			this.robot.disableSchedule(false, function (error, result) {
-				onsole.log(result);
+				that.log(result);
 			}); 
 		}
 		callback();
@@ -123,16 +126,23 @@ NeatoVacuumRobot.prototype = {
 	getClean: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			that.log("Is cleaning: " + that.robot.canPause);
+			debug("Is cleaning: " + that.robot.canPause);
 			callback(false, that.robot.canPause);
 		});
 	},
 
-	getDock: function(callback) {
+	getCanGoToDock: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			that.log("Can go to dock: " + that.robot.canGoToBase);
-			that.log("Is docked: " + that.robot.isDocked);
+			debug("Can go to dock: " + that.robot.canGoToBase);
+			callback(false, !that.robot.canGoToBase);
+		});
+	},
+
+	getDockState: function(callback) {
+		let that = this;
+		this.getState(function (error, result) {
+			debug("Is docked: " + that.robot.isDocked);
 			callback(false, that.robot.isDocked);
 		});
 	},
@@ -140,7 +150,7 @@ NeatoVacuumRobot.prototype = {
 	getEco: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			that.log("Eco mode: " + that.robot.eco);
+			debug("Eco mode: " + that.robot.eco);
 			callback(false, that.robot.eco);
 		});
 	},
@@ -148,7 +158,7 @@ NeatoVacuumRobot.prototype = {
 	getSchedule: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			that.log("Schedule: " + that.robot.isScheduleEnabled);
+			debug("Schedule: " + that.robot.isScheduleEnabled);
 			callback(false, that.robot.isScheduleEnabled);
 		});
 	},
@@ -157,7 +167,7 @@ NeatoVacuumRobot.prototype = {
 	getBatteryLevel: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			that.log("Battery: " + that.robot.charge);
+			debug("Battery: " + that.robot.charge);
 			callback(false, that.robot.charge);
 		});
 	},
@@ -165,7 +175,7 @@ NeatoVacuumRobot.prototype = {
 	getBatteryChargingState: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			that.log("Is charging: " + that.robot.isCharging);
+			debug("Is charging: " + that.robot.isCharging);
 			callback(false, that.robot.isCharging);
 		});
 	},
@@ -185,11 +195,11 @@ NeatoVacuumRobot.prototype = {
 
 	_getState: function(callback) {
 		if (this.lastUpdate !== null && new Date() - this.lastUpdate < 2000) {
-			//this.log("Get state (cached)");
+			debug("Get info (cached)");
 			callback();
 		}
 		else {
-			//this.log("Get state (new)");
+			debug("Get info (new)");
 			let that = this;
 			this.robot.getState(function (error, result) {
 				that.lastUpdate = new Date();
@@ -199,7 +209,7 @@ NeatoVacuumRobot.prototype = {
 	},
 
 	getRobot: function(callback) {
-		//this.log("Get robot");
+		debug("Get robot");
 		let client = new botvac.Client();
 		let that = this;
 		client.authorize(this.email, this.password, false, function (error) {
@@ -214,6 +224,7 @@ NeatoVacuumRobot.prototype = {
 					else {
 						that.robot = robots[0];
 						that.log("Found robot: " + that.robot.name);
+						debug(that.robot);
 						callback();
 					}
 				});
