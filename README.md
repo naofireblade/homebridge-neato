@@ -5,10 +5,11 @@ This is a plugin to control your [Neato](https://www.neatorobotics.com/) vacuum 
 # Features
 
 - Start and pause cleaning
-- Return to base
+- Return to dock
 - Enable and disable schedule
 - Enable and disable eco mode
 - Get battery info
+- Get dock info
 
 # Installation
 
@@ -17,8 +18,6 @@ This is a plugin to control your [Neato](https://www.neatorobotics.com/) vacuum 
 3. Update your configuration file. See the sample below.
 
 # Configuration
-
-Configuration sample:
 
 Add the following information to your config file. Change the values for name, email and password.
 
