@@ -1,6 +1,8 @@
 # homebridge-neato
 
-This is a plugin to control your [Neato](https://www.neatorobotics.com/) vacuum robot. You can download it via [npm](https://www.npmjs.com/package/homebridge-neato).
+This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to control your [Neato](https://www.neatorobotics.com/) vacuum robot. You can download it via [npm](https://www.npmjs.com/package/homebridge-neato).
+
+Feel free to leave any feedback [here](https://github.com/naofireblade/homebridge-neato/issues).
 
 # Features
 
@@ -13,11 +15,12 @@ This is a plugin to control your [Neato](https://www.neatorobotics.com/) vacuum 
 
 # Installation
 
-1. Install homebridge using: npm install -g homebridge
-2. Install this plugin using: npm install -g homebridge-neato
-3. Update your configuration file. See the sample below.
+1. Install homebridge using: `npm install -g homebridge`
+2. Install this plugin using: `npm install -g homebridge-neato`
+3. If you don't have a Neato account yet create one [here](https://www.neatorobotics.com/create-account/).
+4. Update your configuration file. See the sample below.
 
-# Configuration
+### Configuration
 
 Add the following information to your config file. Change the values for name, email and password.
 
@@ -36,4 +39,4 @@ Add the following information to your config file. Change the values for name, e
 
 - BotVac Connected (Firmware 2.2.0)
 
-If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues/new) your experience with this plugin.
+If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) your experience with this plugin.
