@@ -9,4 +9,8 @@
 ## 0.2.0
 
 * Added dock info
-* Changed logging to debug library
+* Improved logging to use a debug library
+
+## 0.2.1
+
+* Improved the go to dock command

@@ -92,10 +92,16 @@ NeatoVacuumRobot.prototype = {
 	dock: function (on, callback) {
 		let that = this;
 		if (on) {
-			debug("Go to dock");
-			that.robot.sendToBase(false, function (error, result) {
+			debug("Pause cleaning to go to dock");
+			this.robot.pauseCleaning(false, function (error, result) {
 				that.log(result);
 			});
+			setTimeout(function() {
+				debug("Go to dock");
+			    that.robot.sendToBase(false, function (error, result) {
+					that.log(result);
+				});
+			}, 3000);
 		}
 		callback();
 	},
@@ -134,8 +140,8 @@ NeatoVacuumRobot.prototype = {
 	getCanGoToDock: function(callback) {
 		let that = this;
 		this.getState(function (error, result) {
-			debug("Can go to dock: " + that.robot.canGoToBase);
-			callback(false, !that.robot.canGoToBase);
+			debug("Can go to dock: " + that.robot.dockHasBeenSeen);
+			callback(false, !that.robot.dockHasBeenSeen);
 		});
 	},
 
@@ -143,6 +149,7 @@ NeatoVacuumRobot.prototype = {
 		let that = this;
 		this.getState(function (error, result) {
 			debug("Is docked: " + that.robot.isDocked);
+			debug(that.robot);
 			callback(false, that.robot.isDocked);
 		});
 	},

@@ -7,11 +7,15 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 # Features
 
 - Start and pause cleaning
-- Return to dock
+- Return to dock\*
 - Enable and disable schedule
 - Enable and disable eco mode
 - Get battery info
 - Get dock info
+
+\* The robot needs to clean for some seconds before he knows where his dock is. After this time the switch to send him home will be automatically available.
+
+**Hint:** To control the robot with your own commands just set up a scene with the name of your choice.
 
 # Installation
 
