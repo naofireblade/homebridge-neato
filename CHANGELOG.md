@@ -14,3 +14,10 @@
 ## 0.2.1
 
 * Improved the go to dock command
+
+## 0.3.0
+
+* Added periodic refresh of robot state
+* Improved go to dock switch to be enabled as soon as possible without manual refresh
+* Improved switches to indicate the time an action lasts
+* Improved eco mode to not be overwritten by robot state

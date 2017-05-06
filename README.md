@@ -28,13 +28,16 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 Add the following information to your config file. Change the values for name, email and password.
 
+The parameter **refresh** is optional (default 120 seconds) and adjusts in what interval changes in the robot state will be pushed to homekit (e.g. when starting the robot with the neato app). The minimum is 60 seconds. You can disable this by entering 0.
+
 ```json
 "accessories": [
 	{
 		"accessory": "NeatoVacuumRobot",
 		"name": "YourRobot",
 		"email": "YourEmail",
-		"password": "YourPassword"
+		"password": "YourPassword",
+		"refresh": "120"
 	}
 ]
 ```
@@ -43,4 +46,4 @@ Add the following information to your config file. Change the values for name, e
 
 - BotVac Connected (Firmware 2.2.0)
 
-If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) your experience with this plugin.
+If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) about your experience with this plugin.
