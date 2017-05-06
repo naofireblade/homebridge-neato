@@ -26,18 +26,13 @@ function NeatoVacuumRobot(log, config) {
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
-
-	// load refresh time
+	
 	// default 120s
 	this.refresh = ('refresh' in config ? parseInt(config['refresh']) : 120);
 	// must be integer and positive
-	if (typeof this.refresh !=='number' || (this.refresh%1)!==0 || this.refresh < 0) {
-		this.refresh = 0;
-	}
+	this.refresh = (typeof this.refresh !=='number' || (this.refresh%1)!==0 || this.refresh < 0) ? 0 : this.refresh;
 	// minimum 60s
-	if (this.refresh != 0 && this.refresh < 60) {
-		this.refresh = 60;
-	}
+	this.refresh = (this.refresh != 0 && this.refresh < 60) ? 60 : this.refresh;
 
 	this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
 	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
