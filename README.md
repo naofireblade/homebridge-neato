@@ -12,6 +12,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 - Enable and disable eco mode
 - Get battery info
 - Get dock info
+- Periodic refresh of robot state
 
 \* The robot needs to clean for some seconds before he knows where his dock is. After this time the switch to send him home will be automatically available.
 
@@ -28,7 +29,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 Add the following information to your config file. Change the values for name, email and password.
 
-The parameter **refresh** is optional (default 120 seconds) and adjusts in what interval changes in the robot state will be pushed to homekit (e.g. when starting the robot with the neato app). The minimum is 60 seconds. You can disable this by entering 0.
+The parameter **refresh** is optional (default off) and adjusts in what interval changes in the robot state will be pushed to homekit (e.g. when starting the robot with the neato app). The minimum refresh time is 60 seconds.
 
 ```json
 "accessories": [

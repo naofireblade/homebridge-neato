@@ -26,13 +26,13 @@ function NeatoVacuumRobot(log, config) {
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
-	
-	// default 120s
-	this.refresh = ('refresh' in config ? parseInt(config['refresh']) : 120);
+
+	// default off
+	this.refresh = ('refresh' in config ? parseInt(config['refresh']) : 0);
 	// must be integer and positive
 	this.refresh = (typeof this.refresh !=='number' || (this.refresh%1)!==0 || this.refresh < 0) ? 0 : this.refresh;
 	// minimum 60s
-	this.refresh = (this.refresh != 0 && this.refresh < 60) ? 60 : this.refresh;
+	this.refresh = (0 < this.refresh < 60) ? 60 : this.refresh;
 
 	this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
 	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
@@ -141,11 +141,7 @@ NeatoVacuumRobot.prototype = {
 					callback();
 				}
 			} else {
-				// dont allow manual setting the switch to off
-				setTimeout(function() {
-					that.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, true);
-					callback();
-				},1000);
+				callback();
 			}
 		});
 	},
@@ -279,8 +275,8 @@ NeatoVacuumRobot.prototype = {
 			// dont update eco, because we cant write that value onto the robot and dont want it to be overwritten in our plugin
 
 			if (that.robot.canPause) {
-				debug("Short timer set: 10s");
-				that.timer = setTimeout(that.getStateTimer.bind(that), 10 * 1000);			
+				debug("Short timer set: 30s");
+				that.timer = setTimeout(that.getStateTimer.bind(that), 30 * 1000);			
 			}
 			else if (that.refresh != 0) {
 				debug("Long timer set: " + that.refresh + "s");

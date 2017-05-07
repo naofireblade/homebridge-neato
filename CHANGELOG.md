@@ -17,7 +17,8 @@
 
 ## 0.3.0
 
-* Added periodic refresh of robot state
+* Added periodic refresh of robot state while cleaning
+* Added optional periodic refresh of robot state while not cleaning
 * Improved go to dock switch to be enabled as soon as possible without manual refresh
-* Improved switches to indicate the time an action lasts
-* Improved eco mode to not be overwritten by robot state
+* Improved switches to indicate the time an action needs to complete
+* Improved eco mode to not be overwritten by robot state update
