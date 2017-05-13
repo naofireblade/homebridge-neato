@@ -141,6 +141,7 @@ NeatoVacuumRobot.prototype = {
 					callback();
 				}
 			} else {
+				debug(that.robot);
 				callback();
 			}
 		});
@@ -186,7 +187,6 @@ NeatoVacuumRobot.prototype = {
 		let that = this;
 		this.getStateAndRobot(function (error, result) {
 			debug("Is docked: " + that.robot.isDocked);
-			debug(that.robot);
 			callback(false, that.robot.isDocked);
 		});
 	},
@@ -295,17 +295,27 @@ NeatoVacuumRobot.prototype = {
 		client.authorize(this.email, this.password, false, function (error) {
 			if (error) {
 				that.log(error);
+				that.log.error("Can't log on to neato cloud. Please check your credentials.")
 			}
 			else {
 				client.getRobots(function (error, robots) {
 					if (error) {
 						that.log(error);
+						that.log.error("Successful login but can't connect to your neato robot.")
 					}
 					else {
-						that.robot = robots[0];
-						that.log("Found robot: " + that.robot.name);
-						debug(that.robot);
-						callback();
+						if (robots.length === 0) {
+							that.log.error("Successful login but no robots associated with your account.")							
+						}
+						else {
+							that.robot = robots[0];
+							that.log("Found robot: " + that.robot.name);
+							debug(that.robot);
+							if (robots.length > 1){
+								that.log.warn("Found more then one robot in your account. This plugin currently just supports one. First one found will be used.")							
+							}
+							callback();
+						}
 					}
 				});
 			}
