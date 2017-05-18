@@ -29,7 +29,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 Add the following information to your config file. Change the values for name, email and password.
 
-The parameter **refresh** is optional (default 0=off) and adjusts in what interval changes the robot state will be pushed to homekit. The minimum refresh time is 60 seconds. You need this only when you set up rules based on the robot state and start him outside of homekit (e.g. with the Neato app).
+The parameter **refresh** is optional (default 0=off) and adjusts in what interval (seconds) changes of the robot state will be pushed to homekit. The minimum refresh time is 60 seconds. You need this only when you set up rules based on the robot state and start him outside of homekit (e.g. with the Neato app).
 
 ```json
 "accessories": [
@@ -38,7 +38,7 @@ The parameter **refresh** is optional (default 0=off) and adjusts in what interv
 		"name": "YourRobot",
 		"email": "YourEmail",
 		"password": "YourPassword",
-		"refresh": "120"
+		"refresh": "0"
 	}
 ]
 ```

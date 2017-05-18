@@ -23,3 +23,7 @@
 * Improved go to dock switch to be enabled as soon as possible without manual refresh
 * Improved switches to indicate the time an action needs to complete
 * Improved eco mode to not be overwritten by robot state update
+
+## 0.3.1
+
+* Added experimental support for newer Neato Botvac models

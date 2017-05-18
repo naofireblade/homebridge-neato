@@ -97,7 +97,7 @@ NeatoVacuumRobot.prototype = {
 					}
 					else {
 						debug("Start cleaning");
-						that.robot.startCleaning(that.robot.eco, callback);
+						that.robot.startCleaning(that.robot.eco, 2, callback);
 					}
 				}
 				else {
@@ -310,7 +310,9 @@ NeatoVacuumRobot.prototype = {
 						else {
 							that.robot = robots[0];
 							that.log("Found robot: " + that.robot.name);
-							debug(that.robot);
+							that.getState(function (error, result) {
+								debug(that.robot);
+							})
 							if (robots.length > 1){
 								that.log.warn("Found more then one robot in your account. This plugin currently just supports one. First one found will be used.")							
 							}
