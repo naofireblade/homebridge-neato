@@ -14,7 +14,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 - Get dock info
 - Periodic refresh of robot state
 
-\* The robot needs to clean for some seconds before he knows where his dock is. After this time the switch to send him home will be automatically available.
+\* Available after some seconds of cleaning.
 
 **Hint:** To control the robot with your own commands just set up a scene with the name of your choice.
 

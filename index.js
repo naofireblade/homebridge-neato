@@ -32,7 +32,7 @@ function NeatoVacuumRobot(log, config) {
 	// must be integer and positive
 	this.refresh = (typeof this.refresh !=='number' || (this.refresh%1)!==0 || this.refresh < 0) ? 0 : this.refresh;
 	// minimum 60s
-	this.refresh = (0 < this.refresh < 60) ? 60 : this.refresh;
+	this.refresh = (this.refresh > 0 && this.refresh < 60) ? 60 : this.refresh;
 
 	this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
 	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");

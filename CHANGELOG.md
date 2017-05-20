@@ -26,4 +26,8 @@
 
 ## 0.3.1
 
-* Added experimental support for newer Neato Botvac models
+* Added support for Neato BotVac D5 Connected
+
+## 0.3.2
+
+* Fixed a bug that refresh is not disabled when set to 0
