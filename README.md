@@ -4,6 +4,8 @@ This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to cont
 
 Feel free to leave any feedback [here](https://github.com/naofireblade/homebridge-neato/issues).
 
+If you update from a previous version you have to adapt your config.
+
 # Features
 
 - Start and pause cleaning
@@ -13,6 +15,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 - Get battery info
 - Get dock info
 - Periodic refresh of robot state
+- Support for multiple robots
 
 \* Available after some seconds of cleaning.
 
@@ -32,10 +35,9 @@ Add the following information to your config file. Change the values for name, e
 The parameter **refresh** is optional (default 0=off) and adjusts in what interval (seconds) changes of the robot state will be pushed to homekit. The minimum refresh time is 60 seconds. You need this only when you set up rules based on the robot state and start him outside of homekit (e.g. with the Neato app).
 
 ```json
-"accessories": [
+"platforms": [
 	{
-		"accessory": "NeatoVacuumRobot",
-		"name": "YourRobot",
+		"platform": "NeatoVacuumRobot",
 		"email": "YourEmail",
 		"password": "YourPassword",
 		"refresh": "0"

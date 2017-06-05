@@ -4,25 +4,16 @@ var inherits = require('util').inherits,
 	botvac = require('node-botvac'),
 
 	Service,
-	Characteristic,
-	vacuumRobotCleanService,
-	vacuumRobotGoToDockService,
-	vacuumRobotDockStateService,
-	vacuumRobotEcoService,
-	vacuumRobotScheduleService,
-	vacuumRobotBatteryService,
-	refresh,
-	timer
+	Characteristic
 
 module.exports = function (homebridge) {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
-	homebridge.registerAccessory("homebridge-neato", "NeatoVacuumRobot", NeatoVacuumRobot);
+	homebridge.registerPlatform("homebridge-neato", "NeatoVacuumRobot", NeatoVacuumRobotPlatform);
 }
 
-function NeatoVacuumRobot(log, config) {
+function NeatoVacuumRobotPlatform(log, config) {
 	this.log = log;
-	this.name = config['name'];
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
@@ -33,6 +24,63 @@ function NeatoVacuumRobot(log, config) {
 	this.refresh = (typeof this.refresh !=='number' || (this.refresh%1)!==0 || this.refresh < 0) ? 0 : this.refresh;
 	// minimum 60s
 	this.refresh = (this.refresh > 0 && this.refresh < 60) ? 60 : this.refresh;
+}
+
+NeatoVacuumRobotPlatform.prototype = {
+	accessories: function(callback) {
+		this.accessories = [];
+
+		let that = this;
+		this.robots = this.getRobots(function () {
+			for (var i = 0; i < that.robots.length; i++) {
+				that.log("Found robot #" + (i+1) + ": " + that.robots[i].name);
+				var robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
+				that.accessories.push(robotAccessory);
+			}
+			callback(that.accessories);
+		});
+	},
+
+	getRobots: function(callback) {
+		debug("Get all robots");
+		let client = new botvac.Client();
+		let that = this;
+		client.authorize(this.email, this.password, false, function (error) {
+			if (error) {
+				that.log(error);
+				that.log.error("Can't log on to neato cloud. Please check your credentials.");
+				callback();
+			}
+			else {
+				client.getRobots(function (error, robots) {
+					if (error) {
+						that.log(error);
+						that.log.error("Successful login but can't connect to your neato robot.");
+						callback();
+					}
+					else {
+						if (robots.length === 0) {
+							that.log.error("Successful login but no robots associated with your account.");
+							callback();					
+						}
+						else {
+							that.robots = robots;
+							callback();
+						}
+					}
+				});
+			}
+		});
+	}
+}
+
+function NeatoVacuumRobotAccessory(robot, platform) {
+	this.platform = platform;
+	this.log = platform.log;
+	this.refresh = platform.refresh;
+	this.robot = robot;
+	this.name = robot.name;
+	this.lastUpdate = null;
 
 	this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
 	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
@@ -41,23 +89,34 @@ function NeatoVacuumRobot(log, config) {
 	this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
 
-	this.lastUpdate = null;
-	this.robot = null;
-	this.getStateTimer();
+	this.updateRobotTimer();	
 }
 
-NeatoVacuumRobot.prototype = {
+
+NeatoVacuumRobotAccessory.prototype = {
 	identify: function (callback) {
-		this.log("Identify requested");
-		callback();
+		let that = this;
+		this.updateRobot(function() {
+			// hide serial and secret in log
+			let _serial = that.robot._serial;
+			let _secret = that.robot._secret;
+			that.robot._serial = "*****";
+			that.robot._secret = "*****";
+			that.log(that.robot);
+			that.robot._serial = _serial;
+			that.robot._secret = _secret;
+			callback();
+		});
 	},
 
 	getServices: function () {
+		debug(this.robot._serial);
 		this.informationService = new Service.AccessoryInformation();
 		this.informationService
+		.setCharacteristic(Characteristic.Name, this.robot.name)
 		.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
-		.setCharacteristic(Characteristic.Model, this.name)
-		.setCharacteristic(Characteristic.SerialNumber, this.serial);
+		.setCharacteristic(Characteristic.Model, "Coming soon")
+		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
 
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('set', this.setClean.bind(this));
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('get', this.getClean.bind(this));
@@ -82,36 +141,36 @@ NeatoVacuumRobot.prototype = {
 
 	setClean: function (on, callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
+		this.updateRobot(function (error, result) {
 			if (on) {
 				if (that.robot.canResume || that.robot.canStart) {
-					// wait for robot to start and then disable the old timer and enable it again (with a shorter interval)
+					// wait for robot to start and then start a short timer to recognize when he can go to dock or is finished
 					setTimeout(function() {
 						clearTimeout(that.timer);
-						that.getStateTimer();
+						that.updateRobotTimer();
 					}, 10000);
 
 					if (that.robot.canResume) {
-						debug("Resume cleaning");
+						debug(that.name + ": Resume cleaning");
 						that.robot.resumeCleaning(callback);
 					}
 					else {
-						debug("Start cleaning");
+						debug(that.name + ": Start cleaning");
 						that.robot.startCleaning(that.robot.eco, 2, callback);
 					}
 				}
 				else {
-					debug("Already cleaning");
+					debug(that.name + ": Cant start, maybe already cleaning");
 					callback();
 				}
 			}
 			else {
 				if (that.robot.canPause) {
-					debug("Pause cleaning");
+					debug(that.name + ": Pause cleaning");
 					that.robot.pauseCleaning(callback);
 				}
 				else {
-					debug("Already stopped");
+					debug(that.name + ": Already stopped");
 					callback();
 				}
 			}
@@ -120,10 +179,10 @@ NeatoVacuumRobot.prototype = {
 
 	setGoToDock: function (on, callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
+		this.updateRobot(function (error, result) {
 			if (on) {
 				if (that.robot.canPause) {
-					debug("Pause cleaning to go to dock");
+					debug(that.name + ": Pause cleaning to go to dock");
 					that.robot.pauseCleaning(function (error, result) {
 						setTimeout(function() {
 							debug("Go to dock");
@@ -133,35 +192,34 @@ NeatoVacuumRobot.prototype = {
 				}
 				else if (that.robot.canGoToBase)
 				{
-					debug("Go to dock");
+					debug(that.name + ": Go to dock");
 					that.robot.sendToBase(callback);
 				}
 				else {
-					debug("Can't go to dock at the moment");
+					debug(that.name + ": Can't go to dock at the moment");
 					callback();
 				}
 			} else {
-				debug(that.robot);
 				callback();
 			}
 		});
 	},
 
 	setEco: function (on, callback) {
-		debug(on ? "Enable eco mode" : "Disable eco mode");
+		debug(this.name + ": " + (on ? "Enable eco mode" : "Disable eco mode"));
 		this.robot.eco = on;
 		callback();
 	},
 
 	setSchedule: function (on, callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
+		this.updateRobot(function (error, result) {
 			if (on) {
-				debug("Enable schedule");
+				debug(that.name + ": Enable schedule");
 				that.robot.enableSchedule(callback); 
 			}
 			else {
-				debug("Disable schedule");
+				debug(that.name + ": Disable schedule");
 				that.robot.disableSchedule(callback); 
 			}
 		});
@@ -169,24 +227,24 @@ NeatoVacuumRobot.prototype = {
 
 	getClean: function(callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
-			debug("Is cleaning: " + that.robot.canPause);
+		this.updateRobot(function (error, result) {
+			debug(that.name + ": Is cleaning: " + that.robot.canPause);
 			callback(false, that.robot.canPause);
 		});
 	},
 
 	getGoToDock: function(callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
-			debug("Can go to dock: " + that.robot.dockHasBeenSeen);
+		this.updateRobot(function (error, result) {
+			debug(that.name + ": Can go to dock: " + that.robot.dockHasBeenSeen);
 			callback(false, !that.robot.dockHasBeenSeen);
 		});
 	},
 
 	getDock: function(callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
-			debug("Is docked: " + that.robot.isDocked);
+		this.updateRobot(function (error, result) {
+			debug(that.name + ": Is docked: " + that.robot.isDocked);
 			callback(false, that.robot.isDocked);
 		});
 	},
@@ -198,8 +256,8 @@ NeatoVacuumRobot.prototype = {
 
 	getSchedule: function(callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
-			debug("Schedule: " + that.robot.isScheduleEnabled);
+		this.updateRobot(function (error, result) {
+			debug(that.name + ": Schedule: " + that.robot.isScheduleEnabled);
 			callback(false, that.robot.isScheduleEnabled);
 		});
 	},
@@ -207,41 +265,28 @@ NeatoVacuumRobot.prototype = {
 
 	getBatteryLevel: function(callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
-			debug("Battery: " + that.robot.charge);
+		this.updateRobot(function (error, result) {
+			debug(that.name + ": Battery: " + that.robot.charge);
 			callback(false, that.robot.charge);
 		});
 	},
 
 	getBatteryChargingState: function(callback) {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
-			debug("Is charging: " + that.robot.isCharging);
+		this.updateRobot(function (error, result) {
+			debug(that.name + ": Is charging: " + that.robot.isCharging);
 			callback(false, that.robot.isCharging);
 		});
 	},
 
-	getStateAndRobot: function(callback) {
+	updateRobot: function(callback) {
 		let that = this;
-		if (this.robot === null)
-		{
-			this.getRobot(function (error, result) {
-				that.getState(callback);
-			});
-		}
-		else {
-			that.getState(callback);
-		}
-	},
-
-	getState: function(callback) {
 		if (this.lastUpdate !== null && new Date() - this.lastUpdate < 2000) {
-			debug("Get state (cached)");
+			debug(this.name + ": Update (cached)");
 			callback();
 		}
 		else {
-			debug("Get state (new)");
-			let that = this;
+			debug(this.name + ": Update (online)");
 			this.robot.getState(function (error, result) {
 				that.lastUpdate = new Date();
 				callback();
@@ -249,10 +294,10 @@ NeatoVacuumRobot.prototype = {
 		}
 	},
 
-	getStateTimer: function() {
-		debug("Timer called");
+	updateRobotTimer: function() {
 		let that = this;
-		this.getStateAndRobot(function (error, result) {
+		debug(this.name + ": Timer called");
+		this.updateRobot(function (error, result) {
 
 			// only update these values if the state is different from the current one, otherwise we might accidentally start an action
 			if (that.vacuumRobotCleanService.getCharacteristic(Characteristic.On).value !== that.robot.canPause) {
@@ -275,52 +320,16 @@ NeatoVacuumRobot.prototype = {
 			// dont update eco, because we cant write that value onto the robot and dont want it to be overwritten in our plugin
 
 			if (that.robot.canPause) {
-				debug("Short timer set: 30s");
-				that.timer = setTimeout(that.getStateTimer.bind(that), 30 * 1000);			
+				debug(that.name + ": Timer set (cleaning): 30s");
+				that.timer = setTimeout(that.updateRobotTimer.bind(that), 30 * 1000);			
 			}
 			else if (that.refresh != 0) {
-				debug("Long timer set: " + that.refresh + "s");
-				that.timer = setTimeout(that.getStateTimer.bind(that), that.refresh * 1000);
+				debug(that.name + ": Timer set (user): " + that.refresh + "s");
+				that.timer = setTimeout(that.updateRobotTimer.bind(that), that.refresh * 1000);
 			}
 			else {
-				debug("Disabled timer");
+				debug(that.name + ": Timer stopped");
 			}
 		});
 	},
-
-	getRobot: function(callback) {
-		debug("Get robot");
-		let client = new botvac.Client();
-		let that = this;
-		client.authorize(this.email, this.password, false, function (error) {
-			if (error) {
-				that.log(error);
-				that.log.error("Can't log on to neato cloud. Please check your credentials.")
-			}
-			else {
-				client.getRobots(function (error, robots) {
-					if (error) {
-						that.log(error);
-						that.log.error("Successful login but can't connect to your neato robot.")
-					}
-					else {
-						if (robots.length === 0) {
-							that.log.error("Successful login but no robots associated with your account.")							
-						}
-						else {
-							that.robot = robots[0];
-							that.log("Found robot: " + that.robot.name);
-							that.getState(function (error, result) {
-								debug(that.robot);
-							})
-							if (robots.length > 1){
-								that.log.warn("Found more then one robot in your account. This plugin currently just supports one. First one found will be used.")							
-							}
-							callback();
-						}
-					}
-				});
-			}
-		});
-	}
 }

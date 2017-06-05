@@ -31,3 +31,10 @@
 ## 0.3.2
 
 * Fixed a bug that refresh is not disabled when set to 0
+
+## 0.4.0
+
+* Added support for multiple robots
+* Added log output when user requests accessory identify
+* Changed plugin to platform instead of single accessory
+* Removed parameter name from config
