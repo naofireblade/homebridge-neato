@@ -18,6 +18,9 @@ function NeatoVacuumRobotPlatform(log, config) {
 	this.email = config['email'];
 	this.password = config['password'];
 
+	this.careNavigation = ('extraCareNavigation' in config && config['extraCareNavigation'] ? 2 : 1);
+	debug("Extra Care Navigation: " + this.careNavigation);
+
 	// default off
 	this.refresh = ('refresh' in config ? parseInt(config['refresh']) : 0);
 	// must be integer and positive
@@ -78,6 +81,7 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.platform = platform;
 	this.log = platform.log;
 	this.refresh = platform.refresh;
+	this.careNavigation = platform.careNavigation;
 	this.robot = robot;
 	this.name = robot.name;
 	this.lastUpdate = null;
@@ -155,8 +159,8 @@ NeatoVacuumRobotAccessory.prototype = {
 						that.robot.resumeCleaning(callback);
 					}
 					else {
-						debug(that.name + ": Start cleaning");
-						that.robot.startCleaning(that.robot.eco, 2, callback);
+						debug(that.name + ": Start cleaning (" + that.careNavigation + ")");
+						that.robot.startCleaning(that.robot.eco, that.careNavigation, callback);
 					}
 				}
 				else {

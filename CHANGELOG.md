@@ -38,3 +38,7 @@
 * Added log output when user requests accessory identify
 * Changed plugin to platform instead of single accessory
 * Removed parameter name from config
+
+## 0.4.1
+
+* Added config parameter for extraCareNavigation
