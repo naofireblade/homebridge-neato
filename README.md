@@ -6,7 +6,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 If you update from a previous version 0.3.x you have to adapt your config.
 
-# Features
+## Features
 
 - Start and pause cleaning
 - Return to dock\*
@@ -20,7 +20,7 @@ If you update from a previous version 0.3.x you have to adapt your config.
 
 \* Available after some seconds of cleaning.
 
-# Installation
+## Installation
 
 1. Install homebridge using: `npm install -g homebridge`
 2. Install this plugin using: `npm install -g homebridge-neato`
@@ -63,7 +63,7 @@ The parameter **extraCareNavigation** determines if supporting models (currently
 ]
 ```
 
-# Tested robots
+## Tested robots
 
 - BotVac Connected (Firmware 2.2.0)
 - BotVac D5 Connected
