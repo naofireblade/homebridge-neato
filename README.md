@@ -29,7 +29,7 @@ If you update from a previous version 0.3.x you have to adapt your config.
 
 ## Configuration
 
-Add the following information to your config file. Change the values for name, email and password.
+Add the following information to your config file. Change the values for email and password.
 
 ### Simple
 
