@@ -27,11 +27,11 @@ If you update from a previous version 0.3.x you have to adapt your config.
 3. If you don't have a Neato account yet create one [here](https://www.neatorobotics.com/create-account/).
 4. Update your configuration file. See the sample below.
 
-### Configuration
+## Configuration
 
 Add the following information to your config file. Change the values for name, email and password.
 
-#### Simple
+### Simple
 
 ```json
 "platforms": [
@@ -43,7 +43,7 @@ Add the following information to your config file. Change the values for name, e
 ]
 ```
 
-#### Advanced
+### Advanced
 
 The following config contains optional settings that are disabled when not specified.
 
