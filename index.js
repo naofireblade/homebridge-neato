@@ -17,6 +17,7 @@ function NeatoVacuumRobotPlatform(log, config) {
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
+	this.hiddenServices = config['disabled'];
 
 	this.careNavigation = ('extraCareNavigation' in config && config['extraCareNavigation'] ? 2 : 1);
 	debug("Extra Care Navigation: " + this.careNavigation);
@@ -82,6 +83,7 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.log = platform.log;
 	this.refresh = platform.refresh;
 	this.careNavigation = platform.careNavigation;
+	this.hiddenServices = platform.hiddenServices;
 	this.robot = robot;
 	this.name = robot.name;
 	this.lastUpdate = null;
@@ -139,8 +141,17 @@ NeatoVacuumRobotAccessory.prototype = {
 		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
 		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
 
-		return [this.informationService, this.vacuumRobotCleanService, this.vacuumRobotGoToDockService, this.vacuumRobotDockStateService, this.vacuumRobotEcoService,
-			this.vacuumRobotScheduleService, this.vacuumRobotBatteryService];
+		this.services = [this.informationService, this.vacuumRobotCleanService, this.vacuumRobotBatteryService];
+		if (this.hiddenServices.indexOf('dock') === -1)
+			this.services.push(this.vacuumRobotGoToDockService);
+		if (this.hiddenServices.indexOf('dockstate') === -1)
+			this.services.push(this.vacuumRobotDockStateService);
+		if (this.hiddenServices.indexOf('eco') === -1)
+			this.services.push(this.vacuumRobotEcoService);
+		if (this.hiddenServices.indexOf('schedule') === -1)
+			this.services.push(this.vacuumRobotScheduleService);
+
+		return this.services;
 	},
 
 	setClean: function (on, callback) {

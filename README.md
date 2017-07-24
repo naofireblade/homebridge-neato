@@ -45,11 +45,13 @@ Add the following information to your config file. Change the values for email a
 
 ### Advanced
 
-The following config contains advanced settings that are disabled when not specified.
+The following config contains advanced optional settings that are off when not specified.
 
-The parameter **refresh** adjusts in what interval (seconds) changes of the robot state will be pushed to homekit. The minimum refresh time is 60 seconds. You need this only when you set up rules based on the robot state and start him outside of homekit (e.g. with the Neato app).
+The parameter **refresh** sets in what interval (seconds) changes of the robot state will be pushed to homekit. The minimum refresh time is 60 seconds. You need this only when you set up rules based on the robot state and start him outside of homekit (e.g. with the Neato app).
 
-The parameter **extraCareNavigation** determines if supporting models (currently Neato D3 and D5) should take extra care of your furniture while cleaning.
+The parameter **extraCareNavigation** sets if supporting models (currently Neato D3 and D5) should take extra care of your furniture while cleaning.
+
+The parameter **disabled** accepts a list of switches/sensors that can be disabled in the neato homekit plugin (e.g. dock, dockstate, eco, schedule).
 
 ```json
 "platforms": [
@@ -58,7 +60,8 @@ The parameter **extraCareNavigation** determines if supporting models (currently
 		"email": "YourEmail",
 		"password": "YourPassword",
 		"refresh": "120",
-		"extraCareNavigation": true
+		"extraCareNavigation": true,
+		"disabled": ["dock", "dockstate", "eco"]
 	}
 ]
 ```
@@ -66,6 +69,7 @@ The parameter **extraCareNavigation** determines if supporting models (currently
 ## Tested robots
 
 - BotVac Connected (Firmware 2.2.0)
+- BotVac D3 Connected
 - BotVac D5 Connected
 
 If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) about your experience with this plugin.

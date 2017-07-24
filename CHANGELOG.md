@@ -42,3 +42,7 @@
 ## 0.4.1
 
 * Added config parameter for extraCareNavigation
+
+## 0.4.2
+
+* Added config parameter to disable switches/sensors
