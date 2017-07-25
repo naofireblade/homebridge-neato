@@ -17,7 +17,7 @@ function NeatoVacuumRobotPlatform(log, config) {
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
-	this.hiddenServices = config['disabled'];
+	this.hiddenServices = ('disabled' in config ? config['disabled'] : '');
 
 	this.careNavigation = ('extraCareNavigation' in config && config['extraCareNavigation'] ? 2 : 1);
 	debug("Extra Care Navigation: " + this.careNavigation);

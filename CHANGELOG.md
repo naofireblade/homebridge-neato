@@ -46,3 +46,7 @@
 ## 0.4.2
 
 * Added config parameter to disable switches/sensors
+
+## 0.4.4
+
+* Fixed config parameter to disable switches/sensors not optional
