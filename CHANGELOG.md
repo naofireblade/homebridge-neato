@@ -50,3 +50,7 @@
 ## 0.4.4
 
 * Fixed config parameter to disable switches/sensors not optional
+
+## 0.4.5
+
+* Fixed compatibility with homebridge 0.4.23 (occupancy sensor not working)

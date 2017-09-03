@@ -260,7 +260,7 @@ NeatoVacuumRobotAccessory.prototype = {
 		let that = this;
 		this.updateRobot(function (error, result) {
 			debug(that.name + ": Is docked: " + that.robot.isDocked);
-			callback(false, that.robot.isDocked);
+			callback(false, that.robot.isDocked ? 1 : 0);
 		});
 	},
 
@@ -328,7 +328,7 @@ NeatoVacuumRobotAccessory.prototype = {
 			}
 
 			// no commands here, values can be updated without problems
-			that.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, that.robot.isDocked);
+			that.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, that.robot.isDocked ? 1 : 0);
 			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, that.robot.charge);
 			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, that.robot.isCharging);
 
