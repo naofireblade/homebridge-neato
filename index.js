@@ -303,6 +303,10 @@ NeatoVacuumRobotAccessory.prototype = {
 		else {
 			debug(this.name + ": Update (online)");
 			this.robot.getState(function (error, result) {
+				if (error) {
+					that.log.error("Error while updating robot state.");
+					that.log.error(error);
+				}
 				that.lastUpdate = new Date();
 				callback();
 			});

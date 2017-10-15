@@ -4,7 +4,7 @@ This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to cont
 
 Feel free to leave any feedback [here](https://github.com/naofireblade/homebridge-neato/issues).
 
-If you update from a previous version 0.3.x you have to adapt your config.
+If you update from a previous version 0.3.x you have to adapt your config (plugin is now a platform).
 
 ## Features
 
