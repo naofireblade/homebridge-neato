@@ -54,3 +54,8 @@
 ## 0.4.5
 
 * Fixed compatibility with homebridge 0.4.23 (occupancy sensor not working)
+
+## 0.4.6
+
+* Added error log while refreshing robot state
+* Fixed a rare bug where the robot stops after some seconds of cleaning

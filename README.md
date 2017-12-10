@@ -70,6 +70,6 @@ The parameter **disabled** accepts a list of switches/sensors that can be disabl
 
 - BotVac Connected (Firmware 2.2.0)
 - BotVac D3 Connected
-- BotVac D5 Connected
+- BotVac D5 Connected (Firmware 3.2.0-305)
 
 If you have another connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) about your experience with this plugin.

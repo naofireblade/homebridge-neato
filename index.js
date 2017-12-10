@@ -323,8 +323,9 @@ NeatoVacuumRobotAccessory.prototype = {
 				that.vacuumRobotCleanService.setCharacteristic(Characteristic.On, that.robot.canPause);
 			}
 
-			if (that.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).value !== !that.robot.dockHasBeenSeen) {
-				that.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, !that.robot.dockHasBeenSeen);
+			// dock switch is on (dock not seen before) and dock has just been seen -> turn switch off
+			if (that.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).value == true && that.robot.dockHasBeenSeen) {
+				that.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, false);
 			}
 
 			if (that.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== that.robot.isScheduleEnabled) {
