@@ -65,6 +65,7 @@ NeatoVacuumRobotPlatform.prototype = {
 					else {
 						if (robots.length === 0) {
 							that.log.error("Successful login but no robots associated with your account.");
+							that.robots = [];
 							callback();					
 						}
 						else {
