@@ -19,25 +19,22 @@ function NeatoVacuumRobotPlatform(log, config) {
 	this.password = config['password'];
 	this.hiddenServices = ('disabled' in config ? config['disabled'] : '');
 
-	this.careNavigation = ('extraCareNavigation' in config && config['extraCareNavigation'] ? 2 : 1);
-	debug("Extra Care Navigation: " + this.careNavigation);
-
 	// default off
 	this.refresh = ('refresh' in config ? parseInt(config['refresh']) : 0);
 	// must be integer and positive
-	this.refresh = (typeof this.refresh !=='number' || (this.refresh%1)!==0 || this.refresh < 0) ? 0 : this.refresh;
+	this.refresh = (typeof this.refresh !== 'number' || (this.refresh % 1) !== 0 || this.refresh < 0) ? 0 : this.refresh;
 	// minimum 60s
 	this.refresh = (this.refresh > 0 && this.refresh < 60) ? 60 : this.refresh;
 }
 
 NeatoVacuumRobotPlatform.prototype = {
-	accessories: function(callback) {
+	accessories: function (callback) {
 		this.accessories = [];
 
 		let that = this;
 		this.robots = this.getRobots(function () {
 			for (var i = 0; i < that.robots.length; i++) {
-				that.log("Found robot #" + (i+1) + ": " + that.robots[i].name);
+				that.log("Found robot #" + (i + 1) + " named \"" + that.robots[i].name + "\" with serial \"" + that.robots[i]._serial + "\"");
 				var robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
 				that.accessories.push(robotAccessory);
 			}
@@ -45,8 +42,8 @@ NeatoVacuumRobotPlatform.prototype = {
 		});
 	},
 
-	getRobots: function(callback) {
-		debug("Get all robots");
+	getRobots: function (callback) {
+		debug("Loading your robots");
 		let client = new botvac.Client();
 		let that = this;
 		client.authorize(this.email, this.password, false, function (error) {
@@ -66,9 +63,10 @@ NeatoVacuumRobotPlatform.prototype = {
 						if (robots.length === 0) {
 							that.log.error("Successful login but no robots associated with your account.");
 							that.robots = [];
-							callback();					
+							callback();
 						}
 						else {
+							debug("Found " + robots.length + " robots");
 							that.robots = robots;
 							callback();
 						}
@@ -83,7 +81,6 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.platform = platform;
 	this.log = platform.log;
 	this.refresh = platform.refresh;
-	this.careNavigation = platform.careNavigation;
 	this.hiddenServices = platform.hiddenServices;
 	this.robot = robot;
 	this.name = robot.name;
@@ -93,17 +90,19 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
 	this.vacuumRobotDockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
 	this.vacuumRobotEcoService = new Service.Switch(this.name + " Eco Mode", "eco");
+	this.vacuumRobotNoGoLinesService = new Service.Switch(this.name + " NoGo Lines", "noGoLines");
+	this.vacuumRobotExtraCareService = new Service.Switch(this.name + " Extra Care", "extraCare");
 	this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
 
-	this.updateRobotTimer();	
+	this.updateRobotTimer();
 }
 
 
 NeatoVacuumRobotAccessory.prototype = {
 	identify: function (callback) {
 		let that = this;
-		this.updateRobot(function() {
+		this.updateRobot(function () {
 			// hide serial and secret in log
 			let _serial = that.robot._serial;
 			let _secret = that.robot._secret;
@@ -117,13 +116,12 @@ NeatoVacuumRobotAccessory.prototype = {
 	},
 
 	getServices: function () {
-		debug(this.robot._serial);
 		this.informationService = new Service.AccessoryInformation();
 		this.informationService
-		.setCharacteristic(Characteristic.Name, this.robot.name)
-		.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
-		.setCharacteristic(Characteristic.Model, "Coming soon")
-		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
+			.setCharacteristic(Characteristic.Name, this.robot.name)
+			.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
+			.setCharacteristic(Characteristic.Model, "Coming soon")
+			.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
 
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('set', this.setClean.bind(this));
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('get', this.getClean.bind(this));
@@ -135,6 +133,12 @@ NeatoVacuumRobotAccessory.prototype = {
 
 		this.vacuumRobotEcoService.getCharacteristic(Characteristic.On).on('set', this.setEco.bind(this));
 		this.vacuumRobotEcoService.getCharacteristic(Characteristic.On).on('get', this.getEco.bind(this));
+
+		this.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).on('set', this.setNoGoLines.bind(this));
+		this.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).on('get', this.getNoGoLines.bind(this));
+
+		this.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).on('set', this.setExtraCare.bind(this));
+		this.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).on('get', this.getExtraCare.bind(this));
 
 		this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).on('set', this.setSchedule.bind(this));
 		this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).on('get', this.getSchedule.bind(this));
@@ -149,6 +153,10 @@ NeatoVacuumRobotAccessory.prototype = {
 			this.services.push(this.vacuumRobotDockStateService);
 		if (this.hiddenServices.indexOf('eco') === -1)
 			this.services.push(this.vacuumRobotEcoService);
+		if (this.hiddenServices.indexOf('nogolines') === -1)
+			this.services.push(this.vacuumRobotNoGoLinesService);
+		if (this.hiddenServices.indexOf('extracare') === -1)
+			this.services.push(this.vacuumRobotExtraCareService);
 		if (this.hiddenServices.indexOf('schedule') === -1)
 			this.services.push(this.vacuumRobotScheduleService);
 
@@ -160,8 +168,9 @@ NeatoVacuumRobotAccessory.prototype = {
 		this.updateRobot(function (error, result) {
 			if (on) {
 				if (that.robot.canResume || that.robot.canStart) {
-					// wait for robot to start and then start a short timer to recognize when he can go to dock or is finished
-					setTimeout(function() {
+					// TODO
+					// start update robot timer if refresh ist "auto"
+					setTimeout(function () {
 						clearTimeout(that.timer);
 						that.updateRobotTimer();
 					}, 10000);
@@ -171,8 +180,23 @@ NeatoVacuumRobotAccessory.prototype = {
 						that.robot.resumeCleaning(callback);
 					}
 					else {
-						debug(that.name + ": Start cleaning (" + that.careNavigation + ")");
-						that.robot.startCleaning(that.robot.eco, that.careNavigation, callback);
+						let eco = that.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
+						let extraCare = that.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
+						let nogoLines = that.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
+						debug(that.name + ": Start cleaning (eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
+						that.robot.startCleaning(
+							eco,
+							extraCare ? 2 : 1,
+							nogoLines,
+							function (error, result) {
+								if (error) {
+									that.log.error(error + ": " + result);
+									callback(true);
+								}
+								else{
+									callback();
+								}
+							});
 					}
 				}
 				else {
@@ -200,19 +224,18 @@ NeatoVacuumRobotAccessory.prototype = {
 				if (that.robot.canPause) {
 					debug(that.name + ": Pause cleaning to go to dock");
 					that.robot.pauseCleaning(function (error, result) {
-						setTimeout(function() {
+						setTimeout(function () {
 							debug("Go to dock");
-						    that.robot.sendToBase(callback);
+							that.robot.sendToBase(callback);
 						}, 1000);
 					});
 				}
-				else if (that.robot.canGoToBase)
-				{
+				else if (that.robot.canGoToBase) {
 					debug(that.name + ": Go to dock");
 					that.robot.sendToBase(callback);
 				}
 				else {
-					debug(that.name + ": Can't go to dock at the moment");
+					that.log.warn(that.name + ": Can't go to dock at the moment");
 					callback();
 				}
 			} else {
@@ -227,21 +250,33 @@ NeatoVacuumRobotAccessory.prototype = {
 		callback();
 	},
 
+	setNoGoLines: function (on, callback) {
+		debug(this.name + ": " + (on ? "Enable nogo lines" : "Disable nogo lines"));
+		this.robot.noGoLines = on;
+		callback();
+	},
+
+	setExtraCare: function (on, callback) {
+		debug(this.name + ": " + (on ? "Enable extra care navigation" : "Disable extra care navigation"));
+		this.robot.navigationMode = on ? 2 : 1;
+		callback();
+	},
+
 	setSchedule: function (on, callback) {
 		let that = this;
 		this.updateRobot(function (error, result) {
 			if (on) {
 				debug(that.name + ": Enable schedule");
-				that.robot.enableSchedule(callback); 
+				that.robot.enableSchedule(callback);
 			}
 			else {
 				debug(that.name + ": Disable schedule");
-				that.robot.disableSchedule(callback); 
+				that.robot.disableSchedule(callback);
 			}
 		});
 	},
 
-	getClean: function(callback) {
+	getClean: function (callback) {
 		let that = this;
 		this.updateRobot(function (error, result) {
 			debug(that.name + ": Is cleaning: " + that.robot.canPause);
@@ -249,64 +284,77 @@ NeatoVacuumRobotAccessory.prototype = {
 		});
 	},
 
-	getGoToDock: function(callback) {
-		let that = this;
-		this.updateRobot(function (error, result) {
-			debug(that.name + ": Can go to dock: " + that.robot.dockHasBeenSeen);
-			callback(false, !that.robot.dockHasBeenSeen);
-		});
+	getGoToDock: function (callback) {
+		callback(false, false);
 	},
 
-	getDock: function(callback) {
+	getDock: function (callback) {
 		let that = this;
-		this.updateRobot(function (error, result) {
+		this.updateRobot(function () {
 			debug(that.name + ": Is docked: " + that.robot.isDocked);
 			callback(false, that.robot.isDocked ? 1 : 0);
 		});
 	},
 
-	getEco: function(callback) {
-		// dont load eco here, because we cant save the eco state on the robot
-		callback(false, this.robot.eco);
+	getEco: function (callback) {
+		let that = this;
+		this.updateRobot(function () {
+			debug(that.name + ": Is eco: " + that.robot.eco);
+			callback(false, that.robot.eco);
+		});
 	},
 
-	getSchedule: function(callback) {
+	getNoGoLines: function (callback) {
 		let that = this;
-		this.updateRobot(function (error, result) {
-			debug(that.name + ": Schedule: " + that.robot.isScheduleEnabled);
+		this.updateRobot(function () {
+			debug(that.name + ": Is nogo lines: " + that.robot.noGoLines);
+			callback(false, that.robot.noGoLines ? 1 : 0);
+		});
+	},
+
+	getExtraCare: function (callback) {
+		let that = this;
+		this.updateRobot(function () {
+			debug(that.name + ": Is extra care navigation: " + (that.robot.navigationMode == 2 ? true : false));
+			callback(false, that.robot.navigationMode == 2 ? 1 : 0);
+		});
+	},
+
+	getSchedule: function (callback) {
+		let that = this;
+		this.updateRobot(function () {
+			debug(that.name + ": Is schedule: " + that.robot.isScheduleEnabled);
 			callback(false, that.robot.isScheduleEnabled);
 		});
 	},
 
 
-	getBatteryLevel: function(callback) {
+	getBatteryLevel: function (callback) {
 		let that = this;
-		this.updateRobot(function (error, result) {
-			debug(that.name + ": Battery: " + that.robot.charge);
+		this.updateRobot(function () {
+			debug(that.name + ": Battery: " + that.robot.charge + "%");
 			callback(false, that.robot.charge);
 		});
 	},
 
-	getBatteryChargingState: function(callback) {
+	getBatteryChargingState: function (callback) {
 		let that = this;
-		this.updateRobot(function (error, result) {
+		this.updateRobot(function () {
 			debug(that.name + ": Is charging: " + that.robot.isCharging);
 			callback(false, that.robot.isCharging);
 		});
 	},
 
-	updateRobot: function(callback) {
+	updateRobot: function (callback) {
 		let that = this;
 		if (this.lastUpdate !== null && new Date() - this.lastUpdate < 2000) {
-			debug(this.name + ": Update (cached)");
 			callback();
 		}
 		else {
-			debug(this.name + ": Update (online)");
+			debug(this.name + ": Updating robot state");
 			this.robot.getState(function (error, result) {
 				if (error) {
-					that.log.error("Error while updating robot state.");
-					that.log.error(error);
+					that.log.error(error + ": " + result);
 				}
 				that.lastUpdate = new Date();
 				callback();
@@ -314,9 +362,8 @@ NeatoVacuumRobotAccessory.prototype = {
 		}
 	},
 
-	updateRobotTimer: function() {
+	updateRobotTimer: function () {
 		let that = this;
-		debug(this.name + ": Timer called");
 		this.updateRobot(function (error, result) {
 
 			// only update these values if the state is different from the current one, otherwise we might accidentally start an action
@@ -335,21 +382,22 @@ NeatoVacuumRobotAccessory.prototype = {
 
 			// no commands here, values can be updated without problems
 			that.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, that.robot.isDocked ? 1 : 0);
+			that.vacuumRobotEcoService.setCharacteristic(Characteristic.On, that.robot.eco);
+			that.vacuumRobotNoGoLinesService.setCharacteristic(Characteristic.On, that.robot.noGoLines);
+			that.vacuumRobotExtraCareService.setCharacteristic(Characteristic.On, that.robot.navigationMode == 2 ? true : false);
 			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, that.robot.charge);
 			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, that.robot.isCharging);
 
-			// dont update eco, because we cant write that value onto the robot and dont want it to be overwritten in our plugin
-
 			if (that.robot.canPause) {
-				debug(that.name + ": Timer set (cleaning): 30s");
-				that.timer = setTimeout(that.updateRobotTimer.bind(that), 30 * 1000);			
+				debug("Updating state in background every 30 seconds while cleaning");
+				that.timer = setTimeout(that.updateRobotTimer.bind(that), 30 * 1000);
 			}
 			else if (that.refresh != 0) {
-				debug(that.name + ": Timer set (user): " + that.refresh + "s");
+				debug("Updating state in background every " + that.refresh + " seconds (user setting)");
 				that.timer = setTimeout(that.updateRobotTimer.bind(that), that.refresh * 1000);
 			}
 			else {
-				debug(that.name + ": Timer stopped");
+				debug("Updating state in background disabled");
 			}
 		});
 	},
