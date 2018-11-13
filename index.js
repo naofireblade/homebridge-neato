@@ -19,12 +19,19 @@ function NeatoVacuumRobotPlatform(log, config) {
 	this.password = config['password'];
 	this.hiddenServices = ('disabled' in config ? config['disabled'] : '');
 
-	// default off
-	this.refresh = ('refresh' in config ? parseInt(config['refresh']) : 0);
-	// must be integer and positive
-	this.refresh = (typeof this.refresh !== 'number' || (this.refresh % 1) !== 0 || this.refresh < 0) ? 0 : this.refresh;
-	// minimum 60s
-	this.refresh = (this.refresh > 0 && this.refresh < 60) ? 60 : this.refresh;
+	if ('refresh' in config && config['refresh'] !== 'auto') {
+		// parse config parameter
+		this.refresh = parseInt(config['refresh']);
+		// must be integer and positive
+		this.refresh = (typeof this.refresh !== 'number' || (this.refresh % 1) !== 0 || this.refresh < 0) ? 60 : this.refresh;
+		// minimum 60s to save some load on the neato servers
+		this.refresh = (this.refresh > 0 && this.refresh < 60) ? 60 : this.refresh;
+	}
+	// default auto
+	else {
+		this.refresh = 'auto';
+	}
+	debug("Refresh is set to: " + this.refresh);
 }
 
 NeatoVacuumRobotPlatform.prototype = {
@@ -168,12 +175,14 @@ NeatoVacuumRobotAccessory.prototype = {
 		this.updateRobot(function (error, result) {
 			if (on) {
 				if (that.robot.canResume || that.robot.canStart) {
-					// TODO
-					// start update robot timer if refresh ist "auto"
-					setTimeout(function () {
-						clearTimeout(that.timer);
-						that.updateRobotTimer();
-					}, 10000);
+
+					// start extra update robot timer if refresh is set to "auto"
+					if (that.refresh === 'auto') {
+						setTimeout(function () {
+							clearTimeout(that.timer);
+							that.updateRobotTimer();
+						}, 60 * 1000);
+					}
 
 					if (that.robot.canResume) {
 						debug(that.name + ": Resume cleaning");
@@ -193,7 +202,7 @@ NeatoVacuumRobotAccessory.prototype = {
 									that.log.error(error + ": " + result);
 									callback(true);
 								}
-								else{
+								else {
 									callback();
 								}
 							});
@@ -388,11 +397,14 @@ NeatoVacuumRobotAccessory.prototype = {
 			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, that.robot.charge);
 			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, that.robot.isCharging);
 
-			if (that.robot.canPause) {
-				debug("Updating state in background every 30 seconds while cleaning");
-				that.timer = setTimeout(that.updateRobotTimer.bind(that), 30 * 1000);
+			// robot is currently cleaning, update if refresh is set to auto or a specific interval
+			if (that.robot.canPause && that.refresh !== 0) {
+				let refreshTime = that.refresh === 'auto' ? 60 : that.refresh
+				debug("Updating state in background every " + refreshTime + " seconds while cleaning");
+				that.timer = setTimeout(that.updateRobotTimer.bind(that), refreshTime * 1000);
 			}
-			else if (that.refresh != 0) {
+			// robot is not cleaning, but a specific refresh interval is set
+			else if (that.refresh !== 'auto' && that.refresh !== 0) {
 				debug("Updating state in background every " + that.refresh + " seconds (user setting)");
 				that.timer = setTimeout(that.updateRobotTimer.bind(that), that.refresh * 1000);
 			}
