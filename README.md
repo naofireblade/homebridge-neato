@@ -14,7 +14,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 - Toggle schedule
 - Toggle eco mode
 - Toggle extra care navigation
-- toggle nogo lines
+- Toggle nogo lines
 - Get battery info
 - Get dock info
 - Periodic refresh of robot state
@@ -67,7 +67,7 @@ The parameter **disabled** accepts a list of switches/sensors that can be disabl
 
 - BotVac Connected (Firmware 2.2.0)
 - BotVac D3 Connected
-- BotVac D5 Connected (Firmware 4.0.0, Firmware 4.3.0)
+- BotVac D5 Connected (Firmware 4.0.0, 4.3.0)
 - BotVac D7 Connected
 
 The plugin should work with D4 and D6 as well. If you have connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) about your experience with this plugin.
