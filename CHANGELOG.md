@@ -63,3 +63,15 @@
 ## 0.4.7
 
 * Fixed an exception when no robot is associated with the account
+
+## 0.5.0
+
+* Added noGo lines button
+* Added extra care navigation button
+* Added syncing cleaning options from last run
+* Added option to disable background state update completely
+* Changed goto dock button is now always off
+* Changed error handling
+* Changed debug messages
+* Updated node-botvac dependency to 0.1.6
+* Removed extra care navigation option parameter (is now a button)
