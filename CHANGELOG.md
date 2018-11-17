@@ -75,3 +75,7 @@
 * Changed debug messages
 * Updated node-botvac dependency to 0.1.6
 * Removed extra care navigation option parameter (is now a button)
+
+## 0.5.1
+
+* Updated node-botvac dependency to 0.1.7
