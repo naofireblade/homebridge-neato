@@ -93,6 +93,9 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.name = robot.name;
 	this.lastUpdate = null;
 
+	this.tempSpot4x4 = false;
+	this.tempSpotRepeat = false;
+
 	this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
 	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
 	this.vacuumRobotDockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
@@ -101,6 +104,10 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.vacuumRobotExtraCareService = new Service.Switch(this.name + " Extra Care", "extraCare");
 	this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
+
+	this.vacuumRobotSpotCleanService = new Service.Switch(this.name + " Spot Clean", "spotClean");
+	this.vacuumRobotSpotRepeatService = new Service.Switch(this.name + " Spot Repeat", "spotRepeat");
+	this.vacuumRobotSpot4x4Service = new Service.Switch(this.name + " Spot Clean 4x4", "spotClean4x4");
 
 	this.updateRobotTimer();
 }
@@ -153,6 +160,18 @@ NeatoVacuumRobotAccessory.prototype = {
 		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
 		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
 
+		this.vacuumRobotSpotCleanService.getCharacteristic(Characteristic.On).on('set', this.setSpotClean.bind(this));
+		this.vacuumRobotSpotCleanService.getCharacteristic(Characteristic.On).on('get', this.getSpotClean.bind(this));
+
+		this.vacuumRobotSpotCleanService.getCharacteristic(Characteristic.On).on('set', this.setSpotClean.bind(this));
+		this.vacuumRobotSpotCleanService.getCharacteristic(Characteristic.On).on('get', this.getSpotClean.bind(this));
+
+		this.vacuumRobotSpot4x4Service.getCharacteristic(Characteristic.On).on('set', this.setSpot4x4.bind(this));
+		this.vacuumRobotSpot4x4Service.getCharacteristic(Characteristic.On).on('get', this.getSpot4x4.bind(this));
+
+		this.vacuumRobotSpotRepeatService.getCharacteristic(Characteristic.On).on('set', this.setSpotRepeat.bind(this));
+		this.vacuumRobotSpotRepeatService.getCharacteristic(Characteristic.On).on('get', this.getSpotRepeat.bind(this));
+
 		this.services = [this.informationService, this.vacuumRobotCleanService, this.vacuumRobotBatteryService];
 		if (this.hiddenServices.indexOf('dock') === -1)
 			this.services.push(this.vacuumRobotGoToDockService);
@@ -166,6 +185,11 @@ NeatoVacuumRobotAccessory.prototype = {
 			this.services.push(this.vacuumRobotExtraCareService);
 		if (this.hiddenServices.indexOf('schedule') === -1)
 			this.services.push(this.vacuumRobotScheduleService);
+ 		if (this.hiddenServices.indexOf('spot') === -1) {
+ 			this.services.push(this.vacuumRobotSpotCleanService);
+ 			this.services.push(this.vacuumRobotSpot4x4Service);
+ 			this.services.push(this.vacuumRobotSpotRepeatService);
+ 		};
 
 		return this.services;
 	},
@@ -216,6 +240,71 @@ NeatoVacuumRobotAccessory.prototype = {
 			else {
 				if (that.robot.canPause) {
 					debug(that.name + ": Pause cleaning");
+					that.robot.pauseCleaning(callback);
+				}
+				else {
+					debug(that.name + ": Already stopped");
+					callback();
+				}
+			}
+		});
+	},
+
+	setSpotClean: function (on, callback) {
+		let that = this;
+		this.updateRobot(function (error, result) {
+			if (on) {
+				if (that.robot.canResume || that.robot.canStart) {
+
+					// start extra update robot timer if refresh is set to "auto"
+ 					if (that.refresh === 'auto') {
+ 						setTimeout(function () {
+ 							clearTimeout(that.timer);
+ 							that.updateRobotTimer();
+ 						}, 60 * 1000);
+ 					}
+
+					if (that.robot.canResume) {
+						debug(that.name + ": Resume spot cleaning");
+						that.robot.resumeCleaning(callback);
+					}
+					else {
+						let eco = that.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
+						if (!that.vacuumRobotSpot4x4Service.getCharacteristic(Characteristic.On).value) {
+							var width = 200;
+ 							var height = 200;
+ 						} else {
+ 							var width = 400;
+ 							var height = 400;
+ 						} 
+ 						let repeat = that.vacuumRobotSpotRepeatService.getCharacteristic(Characteristic.On).value;
+ 						let extraCare = false;
+ 						debug(that.name + ": Start spot cleaning (eco: " + eco + ", width: " + width + ", height: " + height + ", repeat: " + repeat + ")");
+ 						that.robot.startSpotCleaning(
+ 							eco,
+ 							width,
+ 							height,
+ 							repeat ? 2 : 1,
+ 							extraCare ? 2 : 1,
+ 							function (error, result) {
+ 								if (error) {
+ 									that.log.error(error + ": " + result);
+ 									callback(true);
+ 								}
+ 								else {
+ 									callback();
+ 								}
+ 							});
+					}
+				}
+				else {
+					debug(that.name + ": Cant start, maybe already cleaning");
+					callback();
+				}
+			}
+			else {
+				if (that.robot.canPause) {
+					debug(that.name + ": Pause spot cleaning");
 					that.robot.pauseCleaning(callback);
 				}
 				else {
@@ -285,6 +374,28 @@ NeatoVacuumRobotAccessory.prototype = {
 		});
 	},
 
+	setSpotRepeat: function (on, callback) {
+		debug(this.name + ": " + (on ? "Enable spot cleaning repeat mode (2x)" : "Disable spot cleaning repeat mode (2x)"));
+		if (on) {
+			this.tempSpotRepeat = true;
+		}
+		else {
+			this.tempSpotRepeat = false;
+		}
+		callback();
+	},
+
+	setSpot4x4: function (on, callback) {
+		debug(this.name + ": " + (on ? "Enable spot cleaning 4x4 mode" : "Disable spot cleaning 4x4 mode"));
+		if (on) {
+			this.tempSpot4x4 = true;
+		}
+		else {
+			this.tempSpot4x4 = false;
+		}
+		callback();
+	},
+
 	getClean: function (callback) {
 		let that = this;
 		this.updateRobot(function (error, result) {
@@ -337,6 +448,17 @@ NeatoVacuumRobotAccessory.prototype = {
 		});
 	},
 
+ 	getSpotRepeat: function (callback) {
+ 		let that = this;
+			debug(that.name + ": Is spot cleaning repeat: " + that.tempSpotRepeat);
+			callback(false, that.tempSpotRepeat);
+	},
+
+ 	getSpot4x4: function (callback) {
+ 		let that = this;
+ 			debug(that.name + ": Is spot cleaning 4x4: " + that.tempSpot4x4);
+			callback(false, that.tempSpot4x4);
+	},
 
 	getBatteryLevel: function (callback) {
 		let that = this;
@@ -378,6 +500,9 @@ NeatoVacuumRobotAccessory.prototype = {
 			// only update these values if the state is different from the current one, otherwise we might accidentally start an action
 			if (that.vacuumRobotCleanService.getCharacteristic(Characteristic.On).value !== that.robot.canPause) {
 				that.vacuumRobotCleanService.setCharacteristic(Characteristic.On, that.robot.canPause);
+			}
+			if (that.vacuumRobotSpotCleanService.getCharacteristic(Characteristic.On).value !== that.robot.canPause) {
+				that.vacuumRobotSpotCleanService.setCharacteristic(Characteristic.On, that.robot.canPause);
 			}
 
 			// dock switch is on (dock not seen before) and dock has just been seen -> turn switch off
