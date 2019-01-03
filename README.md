@@ -10,11 +10,14 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 ## Features
 
 - Start and pause cleaning
+- Start and pause spot cleaning
 - Return to dock
 - Toggle schedule
 - Toggle eco mode
 - Toggle extra care navigation
 - Toggle nogo lines
+- Toggle 4x4 mode (spot)
+- Toggle repeat mode (spot)
 - Get battery info
 - Get dock info
 - Periodic refresh of robot state
@@ -49,7 +52,7 @@ The following config contains advanced optional settings.
 
 The parameter **refresh** sets an interval in seconds that is used to update the robot state in the background. This is only required for automations based on the robot state. The default value is `auto` which means that the update is automatically enabled while cleaning and disabled while not cleaning. You can set a value in seconds e.g. `120` to enable background updates even when the robot is not cleaning. You can also disable background updates completely by setting the value `0`. This might be required if you experience timeouts in the app because you have other home automation apps that are connected to your robot.
 
-The parameter **disabled** accepts a list of switches/sensors that can be disabled in the neato homekit plugin (e.g. dock, dockstate, eco, schedule).
+The parameter **disabled** accepts a list of switches/sensors that can be disabled in the neato homekit plugin (e.g. dock, dockstate, eco, schedule, spot).
 
 ```json
 "platforms": [
@@ -58,7 +61,7 @@ The parameter **disabled** accepts a list of switches/sensors that can be disabl
 		"email": "YourEmail",
 		"password": "YourPassword",
 		"refresh": "120",
-		"disabled": ["dock", "dockstate", "eco", "nogolines", "extracare", "schedule"]
+		"disabled": ["dock", "dockstate", "eco", "nogolines", "extracare", "schedule", "spot"]
 	}
 ]
 ```
