@@ -1,0 +1,23 @@
+{
+    "pluginAlias": "NeatoVacuumRobot",
+    "pluginType": "platform",
+    "headerDisplay": "For Advanced settings like Refresh time interval or Disabled switches/sensors. [Check Here](https://github.com/naofireblade/homebridge-neato#readme)",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "title": "email",
+          "type": "string",
+          "required": true,
+          "format": "email",
+          "description": "Your Email Address"
+        },
+        "password": {
+            "title": "password",
+            "type": "string",
+            "required": true,
+            "description": "Your Password"
+        }
+      }
+    }
+}
