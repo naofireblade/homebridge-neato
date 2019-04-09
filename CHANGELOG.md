@@ -79,3 +79,7 @@
 ## 0.5.1
 
 * Updated node-botvac dependency to 0.1.7
+
+## 0.5.2
+
+* Added schema file for use with homebridge-config-ui-x

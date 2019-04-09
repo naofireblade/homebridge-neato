@@ -75,3 +75,4 @@ The plugin should work with D4 and D6 as well. If you have connected neato robot
 ## Contributors
 Many thanks go to
 - [ghulands](https://github.com/ghulands) for finding and fixing a bug when no robot is associated with the neato account
+- [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
