@@ -102,6 +102,33 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
 
+	this.updatePersistentMaps(() => {
+		this.vacuumRobotCleanZoneServices = {};
+		this.maps.forEach((map) => {
+			map.boundaries.forEach((boundary) => {
+				if (boundary.type === "polygone") {
+					this.vacuumRobotCleanZoneServices[boundary.id] = new Service.Switch(this.name + " Clean the " + boundary.name, "clean");
+					this.vacuumRobotCleanZoneServices[boundary.id].getCharacteristic(Characteristic.On).on('set', (on, callback) => {
+						if(on){
+							if(that.robot.canStart) {
+								this.robot.startCleaningBoundary(this.eco, this.extraCare, boundary.id, (error, result) => {
+									if (error){
+										debug(error+": "+JSON.stringify(result));
+										return;
+									}
+									callback();
+								})
+							} else {
+								debug("Error, robot is already cleaning");
+								callback();
+							}
+						}
+					})
+				}
+			})
+		})
+	});
+
 	this.updateRobotTimer();
 }
 
@@ -369,6 +396,30 @@ NeatoVacuumRobotAccessory.prototype = {
 				callback();
 			});
 		}
+	},
+
+	updatePersistentMaps: function(callback) {
+		this.robot.getPersistentMaps((error, maps) => {
+			if (error) {
+				this.log.error(error + ": " + result);
+				return;
+			}
+			this.maps = maps;
+			let processedMapsCounter = 0
+			maps.forEach((map) => {
+				this.getMapBoundaries(map.id, (error, result) => {
+					if(error) {
+						this.log.error(error + ": " + result);
+					} else {
+						map.boundaries = result;
+					}
+					processedMapsCounter++;
+					if(processedMapsCounter == this.maps.length) {
+						callback();
+					}
+				})
+			})
+		})
 	},
 
 	updateRobotTimer: function () {
