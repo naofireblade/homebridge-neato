@@ -102,33 +102,6 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
 
-	this.updatePersistentMaps(() => {
-		this.vacuumRobotCleanZoneServices = {};
-		this.maps.forEach((map) => {
-			map.boundaries.forEach((boundary) => {
-				if (boundary.type === "polygone") {
-					this.vacuumRobotCleanZoneServices[boundary.id] = new Service.Switch(this.name + " Clean the " + boundary.name, "clean");
-					this.vacuumRobotCleanZoneServices[boundary.id].getCharacteristic(Characteristic.On).on('set', (on, callback) => {
-						if(on){
-							if(that.robot.canStart) {
-								this.robot.startCleaningBoundary(this.eco, this.extraCare, boundary.id, (error, result) => {
-									if (error){
-										debug(error+": "+JSON.stringify(result));
-										return;
-									}
-									callback();
-								})
-							} else {
-								debug("Error, robot is already cleaning");
-								callback();
-							}
-						}
-					})
-				}
-			})
-		})
-	});
-
 	this.updateRobotTimer();
 }
 
@@ -145,7 +118,34 @@ NeatoVacuumRobotAccessory.prototype = {
 			that.log(that.robot);
 			that.robot._serial = _serial;
 			that.robot._secret = _secret;
-			callback();
+
+	    this.updatePersistentMaps(() => {
+	    	this.vacuumRobotCleanZoneServices = {};
+	    	this.maps.forEach((map) => {
+	    		map.boundaries.forEach((boundary) => {
+	    			if (boundary.type === "polygone") {
+	    				this.vacuumRobotCleanZoneServices[boundary.id] = new     Service.Switch(this.name + " Clean the " + boundary.name,     "clean");
+	    				this.vacuumRobotCleanZoneServices[boundary.id].getCharacteristic    (Characteristic.On).on('set', (on, serviceCallback) => {
+	    					if(on){
+	    						if(that.robot.canStart) {
+	    							this.robot.startCleaningBoundary(this.eco, this.extraCare,     boundary.id, (error, result) => {
+	    								if (error){
+	    									debug(error+": "+JSON.stringify(result));
+	    									return;
+	    								}
+	    								serviceCallback();
+	    							})
+	    						} else {
+	    							debug("Error, robot is already cleaning");
+	    							serviceCallback();
+	    						}
+	    					}
+	    				})
+	    			}
+	    		})
+	    	})
+	    	callback();
+	    });
 		});
 	},
 
@@ -194,6 +194,9 @@ NeatoVacuumRobotAccessory.prototype = {
 		if (this.hiddenServices.indexOf('schedule') === -1)
 			this.services.push(this.vacuumRobotScheduleService);
 
+			this.vacuumRobotCleanZoneServices.forEach((service) => {
+				services.push(service);
+			})
 		return this.services;
 	},
 
