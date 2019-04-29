@@ -6,6 +6,8 @@ var inherits = require('util').inherits,
 	Service,
 	Characteristic
 
+const uuidv4 = require('uuid/v4');
+
 module.exports = function (homebridge) {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
@@ -39,11 +41,18 @@ NeatoVacuumRobotPlatform.prototype = {
 		this.accessories = [];
 
 		let that = this;
-		this.robots = this.getRobots(function () {
+		this.getRobots(function () {
 			for (var i = 0; i < that.robots.length; i++) {
 				that.log("Found robot #" + (i + 1) + " named \"" + that.robots[i].name + "\" with serial \"" + that.robots[i]._serial + "\"");
 				var robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
 				that.accessories.push(robotAccessory);
+				that.robots[i].maps.forEach((map) => {
+					map.boundaries.forEach((boundary) => {
+						if (boundary.type === "polygon") {
+							that.accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
+						}
+					})
+				})
 			}
 			callback(that.accessories);
 		});
@@ -53,14 +62,14 @@ NeatoVacuumRobotPlatform.prototype = {
 		debug("Loading your robots");
 		let client = new botvac.Client();
 		let that = this;
-		client.authorize(this.email, this.password, false, function (error) {
+		client.authorize(this.email, this.password, false, (error) => {
 			if (error) {
 				that.log(error);
 				that.log.error("Can't log on to neato cloud. Please check your credentials.");
 				callback();
 			}
 			else {
-				client.getRobots(function (error, robots) {
+				client.getRobots((error, robots) => {
 					if (error) {
 						that.log(error);
 						that.log.error("Successful login but can't connect to your neato robot.");
@@ -74,8 +83,36 @@ NeatoVacuumRobotPlatform.prototype = {
 						}
 						else {
 							debug("Found " + robots.length + " robots");
-							that.robots = robots;
-							callback();
+							let updatedRobotCount = 0;
+						    that.robots = robots;
+						    that.robots.forEach((robot) => {
+								robot.getPersistentMaps((error, result) => {
+									if (error) {
+										that.log("Error updating persistent maps: " + error + ": " + result);
+										callback();
+										return;
+									}
+									robot.maps = result;
+									let processedMapCount = 0
+									robot.maps.forEach((map) => {
+										robot.getMapBoundaries(map.id, (error, result) => {
+											if(error) {
+												this.log("error getting boundaries: " + error + ": " + result)
+											} else {
+												map.boundaries = result.boundaries;
+											}
+											processedMapCount++;
+											if(processedMapCount == robot.maps.length) {
+												this.log("Discovered Maps: " + JSON.stringify(robot.maps));
+												updatedRobotCount++
+												if (updatedRobotCount === that.robots.length) {
+													callback();
+												}
+											}
+										})
+									})
+								})
+							})
 						}
 					}
 				});
@@ -84,8 +121,10 @@ NeatoVacuumRobotPlatform.prototype = {
 	}
 }
 
-function NeatoVacuumRobotAccessory(robot, platform) {
+function NeatoVacuumRobotAccessory(robot, platform, boundary) {
+	this.uuid_base = uuidv4();
 	this.platform = platform;
+	this.boundary = boundary;
 	this.log = platform.log;
 	this.refresh = platform.refresh;
 	this.hiddenServices = platform.hiddenServices;
@@ -93,14 +132,26 @@ function NeatoVacuumRobotAccessory(robot, platform) {
 	this.name = robot.name;
 	this.lastUpdate = null;
 
-	this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
-	this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
-	this.vacuumRobotDockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
-	this.vacuumRobotEcoService = new Service.Switch(this.name + " Eco Mode", "eco");
-	this.vacuumRobotNoGoLinesService = new Service.Switch(this.name + " NoGo Lines", "noGoLines");
-	this.vacuumRobotExtraCareService = new Service.Switch(this.name + " Extra Care", "extraCare");
-	this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
+
+	if(!this.boundary) {
+		this.vacuumRobotCleanService = new Service.Switch("Clean", "clean");
+		this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
+		this.vacuumRobotDockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
+		this.vacuumRobotEcoService = new Service.Switch(this.name + " Eco Mode", "eco");
+		this.vacuumRobotNoGoLinesService = new Service.Switch(this.name + " NoGo Lines", "noGoLines");
+		this.vacuumRobotExtraCareService = new Service.Switch(this.name + " Extra Care", "extraCare");
+		this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
+	} else {
+		const splitName = boundary.name.split(' ');
+		let serviceName = "Clean the " + boundary.name;
+		if(splitName.length >= 2 && splitName[splitName.length-2].match(/[']s$/g)){
+			serviceName = "Clean " + boundary.name;
+		}
+	    this.vacuumRobotCleanBoundaryService =
+			new Service.Switch(serviceName, "cleanBoundary:" + boundary.id);
+		this.log("Adding zone cleaning for: " + boundary.name);
+	}
 
 	this.updateRobotTimer();
 }
@@ -118,45 +169,23 @@ NeatoVacuumRobotAccessory.prototype = {
 			that.log(that.robot);
 			that.robot._serial = _serial;
 			that.robot._secret = _secret;
-
-	    this.updatePersistentMaps(() => {
-	    	this.vacuumRobotCleanZoneServices = {};
-	    	this.maps.forEach((map) => {
-	    		map.boundaries.forEach((boundary) => {
-	    			if (boundary.type === "polygone") {
-	    				this.vacuumRobotCleanZoneServices[boundary.id] = new     Service.Switch(this.name + " Clean the " + boundary.name,     "clean");
-	    				this.vacuumRobotCleanZoneServices[boundary.id].getCharacteristic    (Characteristic.On).on('set', (on, serviceCallback) => {
-	    					if(on){
-	    						if(that.robot.canStart) {
-	    							this.robot.startCleaningBoundary(this.eco, this.extraCare,     boundary.id, (error, result) => {
-	    								if (error){
-	    									debug(error+": "+JSON.stringify(result));
-	    									return;
-	    								}
-	    								serviceCallback();
-	    							})
-	    						} else {
-	    							debug("Error, robot is already cleaning");
-	    							serviceCallback();
-	    						}
-	    					}
-	    				})
-	    			}
-	    		})
-	    	})
-	    	callback();
-	    });
 		});
 	},
 
 	getServices: function () {
-		this.informationService = new Service.AccessoryInformation();
-		this.informationService
-			.setCharacteristic(Characteristic.Name, this.robot.name)
-			.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
-			.setCharacteristic(Characteristic.Model, "Coming soon")
-			.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
+	    this.informationService = new Service.AccessoryInformation();
+	    this.informationService
+		.setCharacteristic(Characteristic.Name, this.robot.name)
+		.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
+		.setCharacteristic(Characteristic.Model, "Coming soon")
+		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
 
+	    this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
+	    this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
+
+	    this.services = [this.informationService, this.vacuumRobotBatteryService];
+
+	    if(!this.boundary) {
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('set', this.setClean.bind(this));
 		this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('get', this.getClean.bind(this));
 
@@ -177,82 +206,123 @@ NeatoVacuumRobotAccessory.prototype = {
 		this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).on('set', this.setSchedule.bind(this));
 		this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).on('get', this.getSchedule.bind(this));
 
-		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
-		this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
+		this.services.push(this.vacuumRobotCleanService);
 
-		this.services = [this.informationService, this.vacuumRobotCleanService, this.vacuumRobotBatteryService];
 		if (this.hiddenServices.indexOf('dock') === -1)
-			this.services.push(this.vacuumRobotGoToDockService);
+		    this.services.push(this.vacuumRobotGoToDockService);
 		if (this.hiddenServices.indexOf('dockstate') === -1)
-			this.services.push(this.vacuumRobotDockStateService);
+		    this.services.push(this.vacuumRobotDockStateService);
 		if (this.hiddenServices.indexOf('eco') === -1)
-			this.services.push(this.vacuumRobotEcoService);
+		    this.services.push(this.vacuumRobotEcoService);
 		if (this.hiddenServices.indexOf('nogolines') === -1)
-			this.services.push(this.vacuumRobotNoGoLinesService);
+		    this.services.push(this.vacuumRobotNoGoLinesService);
 		if (this.hiddenServices.indexOf('extracare') === -1)
-			this.services.push(this.vacuumRobotExtraCareService);
+		    this.services.push(this.vacuumRobotExtraCareService);
 		if (this.hiddenServices.indexOf('schedule') === -1)
-			this.services.push(this.vacuumRobotScheduleService);
+		    this.services.push(this.vacuumRobotScheduleService);
+	    }
 
-			this.vacuumRobotCleanZoneServices.forEach((service) => {
-				services.push(service);
+	    if(this.boundary){
+		this.vacuumRobotCleanBoundaryService.getCharacteristic(Characteristic.On).on('set', (on, serviceCallback) => {
+		    this.setCleanBoundary(this.boundary.id, on, serviceCallback)
+		})
+		this.vacuumRobotCleanBoundaryService.getCharacteristic(Characteristic.On).on('get', (serviceCallback) => {
+		    this.getCleanBoundary(this.boundary.id, serviceCallback);
+		})
+		this.services.push(this.vacuumRobotCleanBoundaryService);
+	    }
+
+	    return this.services;
+	},
+
+	setCleanBoundary: function (boundaryId, on, callback) {
+	    this.updateRobot((error, result) => {
+		if(on){
+		    if(this.robot.canStart) {
+			this.log("Starting to clean: "+boundaryId);
+			this.robot.startCleaningBoundary(this.eco, this.extraCare, boundaryId, (error, result) => {
+			    if (error){
+				this.log(error+": "+JSON.stringify(result));
+			    }
+			    callback();
 			})
-		return this.services;
+			return
+		    } else {
+			this.log("Error, robot is already cleaning");
+		    }
+		} else {
+		    if (this.robot.canPause) {
+			debug(this.name + ": Pause cleaning");
+			this.robot.pauseCleaning(callback);
+			return;
+		    }
+		    else {
+			debug(this.name + ": Already stopped");
+		    }
+		}
+		callback();
+	    });
+	},
+
+	getCleanBoundary: function (boundaryId, callback) {
+	    this.updateRobot((error, result) => {
+		callback(false, this.robot.canPause && (this.robot.cleaningBoundaryId == boundaryId));
+	    });
 	},
 
 	setClean: function (on, callback) {
 		let that = this;
 		this.updateRobot(function (error, result) {
-			if (on) {
-				if (that.robot.canResume || that.robot.canStart) {
+		    if (on) {
+			if (that.robot.canResume || that.robot.canStart) {
 
-					// start extra update robot timer if refresh is set to "auto"
-					if (that.refresh === 'auto') {
-						setTimeout(function () {
-							clearTimeout(that.timer);
-							that.updateRobotTimer();
-						}, 60 * 1000);
-					}
+			    // start extra update robot timer if refresh is set to "auto"
+			    if (that.refresh === 'auto') {
+				setTimeout(function () {
+				    clearTimeout(that.timer);
+				    that.updateRobotTimer();
+				}, 60 * 1000);
+			    }
 
-					if (that.robot.canResume) {
-						debug(that.name + ": Resume cleaning");
-						that.robot.resumeCleaning(callback);
+			    if (that.robot.canResume) {
+				debug(that.name + ": Resume cleaning");
+				that.robot.resumeCleaning(callback);
+			    }
+			    else {
+				let eco = that.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
+				let extraCare = that.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
+				let nogoLines = that.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
+				debug(that.name + ": Start cleaning (eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
+				that.robot.startCleaning(
+				    eco,
+				    extraCare ? 2 : 1,
+				    nogoLines,
+				    function (error, result) {
+					if (error) {
+					    that.log.error(error + ": " + result);
+					    callback(true);
 					}
 					else {
-						let eco = that.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
-						let extraCare = that.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
-						let nogoLines = that.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
-						debug(that.name + ": Start cleaning (eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
-						that.robot.startCleaning(
-							eco,
-							extraCare ? 2 : 1,
-							nogoLines,
-							function (error, result) {
-								if (error) {
-									that.log.error(error + ": " + result);
-									callback(true);
-								}
-								else {
-									callback();
-								}
-							});
+					    callback();
 					}
-				}
-				else {
-					debug(that.name + ": Cant start, maybe already cleaning");
-					callback();
-				}
+				    });
+			    }
 			}
 			else {
-				if (that.robot.canPause) {
-					debug(that.name + ": Pause cleaning");
-					that.robot.pauseCleaning(callback);
-				}
-				else {
-					debug(that.name + ": Already stopped");
-					callback();
-				}
+			    debug(that.name + ": Cant start, maybe already cleaning");
+			    callback();
 			}
+		    }
+		    else {
+			if (that.robot.canPause) {
+			    debug(that.name + ": Pause cleaning");
+			    that.robot.pauseCleaning(callback);
+			}
+			else {
+			    debug(that.name + ": Already stopped");
+			    callback();
+			}
+		    }
 		});
 	},
 
@@ -401,70 +471,54 @@ NeatoVacuumRobotAccessory.prototype = {
 		}
 	},
 
-	updatePersistentMaps: function(callback) {
-		this.robot.getPersistentMaps((error, maps) => {
-			if (error) {
-				this.log.error(error + ": " + result);
-				return;
-			}
-			this.maps = maps;
-			let processedMapsCounter = 0
-			maps.forEach((map) => {
-				this.getMapBoundaries(map.id, (error, result) => {
-					if(error) {
-						this.log.error(error + ": " + result);
-					} else {
-						map.boundaries = result;
-					}
-					processedMapsCounter++;
-					if(processedMapsCounter == this.maps.length) {
-						callback();
-					}
-				})
-			})
-		})
-	},
-
 	updateRobotTimer: function () {
-		let that = this;
-		this.updateRobot(function (error, result) {
+	    let that = this;
+	    this.updateRobot((error, result) => {
 
-			// only update these values if the state is different from the current one, otherwise we might accidentally start an action
-			if (that.vacuumRobotCleanService.getCharacteristic(Characteristic.On).value !== that.robot.canPause) {
-				that.vacuumRobotCleanService.setCharacteristic(Characteristic.On, that.robot.canPause);
-			}
+		if (!this.boundary) {
+		    // only update these values if the state is different from the current one, otherwise we might accidentally start an action
+		    if (that.vacuumRobotCleanService.getCharacteristic(Characteristic.On).value !== that.robot.canPause) {
+			that.vacuumRobotCleanService.setCharacteristic(Characteristic.On, that.robot.canPause);
+		    }
 
-			// dock switch is on (dock not seen before) and dock has just been seen -> turn switch off
-			if (that.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).value == true && that.robot.dockHasBeenSeen) {
-				that.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, false);
-			}
+		    // dock switch is on (dock not seen before) and dock has just been seen -> turn switch off
+		    if (that.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).value == true && that.robot.dockHasBeenSeen) {
+			that.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, false);
+		    }
 
-			if (that.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== that.robot.isScheduleEnabled) {
-				that.vacuumRobotScheduleService.setCharacteristic(Characteristic.On, that.robot.isScheduleEnabled);
-			}
+		    if (that.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== that.robot.isScheduleEnabled) {
+			that.vacuumRobotScheduleService.setCharacteristic(Characteristic.On, that.robot.isScheduleEnabled);
+		    }
 
-			// no commands here, values can be updated without problems
-			that.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, that.robot.isDocked ? 1 : 0);
-			that.vacuumRobotEcoService.setCharacteristic(Characteristic.On, that.robot.eco);
-			that.vacuumRobotNoGoLinesService.setCharacteristic(Characteristic.On, that.robot.noGoLines);
-			that.vacuumRobotExtraCareService.setCharacteristic(Characteristic.On, that.robot.navigationMode == 2 ? true : false);
-			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, that.robot.charge);
-			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, that.robot.isCharging);
+		    // no commands here, values can be updated without problems
+		    that.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, that.robot.isDocked ? 1 : 0);
+		    that.vacuumRobotEcoService.setCharacteristic(Characteristic.On, that.robot.eco);
+		    that.vacuumRobotNoGoLinesService.setCharacteristic(Characteristic.On, that.robot.noGoLines);
+		    that.vacuumRobotExtraCareService.setCharacteristic(Characteristic.On, that.robot.navigationMode == 2 ? true : false);
 
-			// robot is currently cleaning, update if refresh is set to auto or a specific interval
-			if (that.robot.canPause && that.refresh !== 0) {
-				let refreshTime = that.refresh === 'auto' ? 60 : that.refresh
-				debug("Updating state in background every " + refreshTime + " seconds while cleaning");
-				that.timer = setTimeout(that.updateRobotTimer.bind(that), refreshTime * 1000);
-			}
-			// robot is not cleaning, but a specific refresh interval is set
-			else if (that.refresh !== 'auto' && that.refresh !== 0) {
-				debug("Updating state in background every " + that.refresh + " seconds (user setting)");
-				that.timer = setTimeout(that.updateRobotTimer.bind(that), that.refresh * 1000);
-			}
-			else {
-				debug("Updating state in background disabled");
-			}
-		});
+		} else {
+		    if(this.vacuumRobotCleanBoundaryService.getCharacteristic(Characteristic.On).value !== that.robot.canPause) {
+			this.vacuumRobotCleanBoundaryService.setCharacteristic(Characteristic.On, that.robot.canPause);
+		    }
+		}
+
+		that.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, that.robot.charge);
+		that.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, that.robot.isCharging);
+
+		// robot is currently cleaning, update if refresh is set to auto or a specific interval
+		if (that.robot.canPause && that.refresh !== 0) {
+		    let refreshTime = that.refresh === 'auto' ? 60 : that.refresh
+		    debug("Updating state in background every " + refreshTime + " seconds while cleaning");
+		    that.timer = setTimeout(that.updateRobotTimer.bind(that), refreshTime * 1000);
+		}
+		// robot is not cleaning, but a specific refresh interval is set
+		else if (that.refresh !== 'auto' && that.refresh !== 0) {
+		    debug("Updating state in background every " + that.refresh + " seconds (user setting)");
+		    that.timer = setTimeout(that.updateRobotTimer.bind(that), that.refresh * 1000);
+		}
+		else {
+		    debug("Updating state in background disabled");
+		}
+	    });
 	},
 }

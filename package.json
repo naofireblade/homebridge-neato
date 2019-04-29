@@ -20,7 +20,8 @@
     "url": "git://github.com/naofireblade/homebridge-neato.git"
   },
   "dependencies": {
+    "debug": "^2.2.0",
     "node-botvac": ">=0.1.7",
-    "debug": "^2.2.0"
+    "uuid": "^3.3.2"
   }
 }
