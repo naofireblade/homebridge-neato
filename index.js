@@ -6,8 +6,6 @@ var inherits = require('util').inherits,
 	Service,
 	Characteristic
 
-const uuidv4 = require('uuid/v4');
-
 module.exports = function (homebridge) {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
@@ -38,23 +36,23 @@ function NeatoVacuumRobotPlatform(log, config) {
 
 NeatoVacuumRobotPlatform.prototype = {
 	accessories: function (callback) {
-		this.accessories = [];
+		let accessories = [];
 
 		let that = this;
 		this.getRobots(function () {
 			for (var i = 0; i < that.robots.length; i++) {
 				that.log("Found robot #" + (i + 1) + " named \"" + that.robots[i].name + "\" with serial \"" + that.robots[i]._serial + "\"");
 				var robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
-				that.accessories.push(robotAccessory);
+				accessories.push(robotAccessory);
 				that.robots[i].maps.forEach((map) => {
 					map.boundaries.forEach((boundary) => {
 						if (boundary.type === "polygon") {
-							that.accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
+							accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
 						}
 					})
 				})
 			}
-			callback(that.accessories);
+			callback(accessories);
 		});
 	},
 
@@ -103,7 +101,6 @@ NeatoVacuumRobotPlatform.prototype = {
 											}
 											processedMapCount++;
 											if(processedMapCount == robot.maps.length) {
-												this.log("Discovered Maps: " + JSON.stringify(robot.maps));
 												updatedRobotCount++
 												if (updatedRobotCount === that.robots.length) {
 													callback();
@@ -122,14 +119,17 @@ NeatoVacuumRobotPlatform.prototype = {
 }
 
 function NeatoVacuumRobotAccessory(robot, platform, boundary) {
-	this.uuid_base = uuidv4();
 	this.platform = platform;
 	this.boundary = boundary;
 	this.log = platform.log;
 	this.refresh = platform.refresh;
 	this.hiddenServices = platform.hiddenServices;
 	this.robot = robot;
-	this.name = robot.name;
+	if(!this.boundary) {
+		this.name = robot.name;
+	} else {
+		this.name =  this.robot.name + ' - ' + this.boundary.name;
+	}
 	this.lastUpdate = null;
 
 	this.vacuumRobotBatteryService = new Service.BatteryService("Battery", "battery");
@@ -175,10 +175,16 @@ NeatoVacuumRobotAccessory.prototype = {
 	getServices: function () {
 	    this.informationService = new Service.AccessoryInformation();
 	    this.informationService
-		.setCharacteristic(Characteristic.Name, this.robot.name)
 		.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
 		.setCharacteristic(Characteristic.Model, "Coming soon")
 		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
+		if(!this.boundary) {
+			this.informationService
+			.setCharacteristic(Characteristic.Name, this.robot.name)
+		} else {
+			this.informationService
+			.setCharacteristic(Characteristic.Name, this.robot.name + ' - ' + this.boundary.name)
+		}
 
 	    this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
 	    this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
