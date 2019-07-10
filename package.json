@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "debug": "^2.2.0",
-    "node-botvac": ">=0.1.7",
+    "node-botvac": ">=0.3.0",
     "uuid": "^3.3.2"
   }
 }
