@@ -11,10 +11,11 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 - Start and pause cleaning
 - Return to dock
-- Toggle schedule
-- Toggle eco mode
-- Toggle extra care navigation
-- Toggle nogo lines
+- Scheduling
+- Eco mode
+- Extra care navigation
+- Nogo lines
+- Zone cleaning
 - Get battery info
 - Get dock info
 - Periodic refresh of robot state
@@ -76,3 +77,4 @@ The plugin should work with D4 and D6 as well. If you have connected neato robot
 Many thanks go to
 - [ghulands](https://github.com/ghulands) for finding and fixing a bug when no robot is associated with the neato account
 - [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
+- [Antoine de Maleprade](https://github.com/az0uz) for adding the zone cleaning feature

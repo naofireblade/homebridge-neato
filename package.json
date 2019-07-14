@@ -1,6 +1,6 @@
 {
   "name": "homebridge-neato",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "A Neato vacuum robot plugin for homebridge.",
   "license": "MIT",
   "keywords": [
@@ -13,8 +13,23 @@
     "homebridge": ">=0.2.0"
   },
   "author": {
-    "name": "Arne Blumentritt"
+    "name": "Arne Blumentritt",
+    "url2": "https://github.com/naofireblade"
   },
+  "contributors": [
+    {
+      "name": "ghulands",
+      "url": "https://github.com/ghulands"
+    },
+    {
+      "name": "Berkay",
+      "url": "https://github.com/btutal"
+    },
+    {
+      "name": "Antoine de Maleprade",
+      "url": "https://github.com/az0uz"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git://github.com/naofireblade/homebridge-neato.git"
