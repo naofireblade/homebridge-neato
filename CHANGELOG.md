@@ -83,3 +83,11 @@
 ## 0.5.2
 
 * Added schema file for use with homebridge-config-ui-x
+
+## 0.6.0
+
+* Added support for zone cleaning
+
+## 0.6.1
+
+* Fixed homebridge startup failed when robot does not support zone cleaning

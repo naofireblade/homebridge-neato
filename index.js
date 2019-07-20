@@ -89,6 +89,10 @@ NeatoVacuumRobotPlatform.prototype = {
                                     }
                                     robot.maps = result;
                                     let processedMapCount = 0;
+                                    if (robot.maps.length === 0)
+                                    {
+                                        callback();
+                                    }
                                     robot.maps.forEach((map) => {
                                         robot.getMapBoundaries(map.id, (error, result) => {
                                             if (error) {
