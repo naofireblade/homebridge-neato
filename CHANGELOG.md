@@ -91,3 +91,7 @@
 ## 0.6.1
 
 * Fixed homebridge startup failed when robot does not support zone cleaning
+
+## 0.6.2
+
+* Fixed homebridge startup failed when robot does not support mapping

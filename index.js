@@ -44,13 +44,16 @@ NeatoVacuumRobotPlatform.prototype = {
                 that.log("Found robot #" + (i + 1) + " named \"" + that.robots[i].name + "\" with serial \"" + that.robots[i]._serial + "\"");
                 let robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
                 accessories.push(robotAccessory);
-                that.robots[i].maps.forEach((map) => {
-                    map.boundaries.forEach((boundary) => {
-                        if (boundary.type === "polygon") {
-                            accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
-                        }
+                if (that.robots[i].maps && that.robots[i].maps.length > 0)
+                {
+                    that.robots[i].maps.forEach((map) => {
+                        map.boundaries.forEach((boundary) => {
+                            if (boundary.type === "polygon") {
+                                accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
+                            }
+                        })
                     })
-                })
+                }
             }
             callback(accessories);
         });
