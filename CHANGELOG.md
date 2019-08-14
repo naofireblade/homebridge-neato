@@ -95,3 +95,9 @@
 ## 0.6.2
 
 * Fixed homebridge startup failed when robot does not support mapping
+
+## 0.6.3
+
+* Fixed homebridge crash when robot has a map without zones
+* Fixed homebridge crash when homebridge has no internet connection or the neato servers are offline
+* Fixed homebridge crash when 2 zones have the same name
