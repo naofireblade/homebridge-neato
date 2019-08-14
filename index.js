@@ -37,8 +37,8 @@ function NeatoVacuumRobotPlatform(log, config) {
 NeatoVacuumRobotPlatform.prototype = {
     accessories: function (callback) {
         let accessories = [];
-
         let that = this;
+        that.boundaryNames = [];
         this.getRobots(function () {
             if (that.robots) {
                 that.robots.forEach((robot, i) => {
@@ -135,6 +135,19 @@ function NeatoVacuumRobotAccessory(robot, platform, boundary) {
     if (!this.boundary) {
         this.name = robot.name;
     } else {
+        // if boundary name already exists
+        if (platform.boundaryNames.includes(this.boundary.name)) {
+            let lastChar = this.boundary.name.slice(-1);
+            // boundary name already contains a count number
+            if (!isNaN(lastChar)) {
+                // Increment existing count number
+                this.boundary.name = this.boundary.name.slice(0, -1) + (parseInt(lastChar) + 1);
+            } else {
+                // Add a new count number
+                this.boundary.name = this.boundary.name + " 2";
+            }
+        }
+        platform.boundaryNames.push(this.boundary.name);
         this.name = this.robot.name + ' - ' + this.boundary.name;
     }
     this.lastUpdate = null;
