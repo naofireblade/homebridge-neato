@@ -44,14 +44,15 @@ NeatoVacuumRobotPlatform.prototype = {
                 that.log("Found robot #" + (i + 1) + " named \"" + that.robots[i].name + "\" with serial \"" + that.robots[i]._serial + "\"");
                 let robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
                 accessories.push(robotAccessory);
-                if (that.robots[i].maps && that.robots[i].maps.length > 0)
-                {
+                if (that.robots[i].maps) {
                     that.robots[i].maps.forEach((map) => {
-                        map.boundaries.forEach((boundary) => {
-                            if (boundary.type === "polygon") {
-                                accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
-                            }
-                        })
+                        if (map.boundaries) {
+                            map.boundaries.forEach((boundary) => {
+                                if (boundary.type === "polygon") {
+                                    accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
+                                }
+                            })
+                        }
                     })
                 }
             }
@@ -307,7 +308,7 @@ NeatoVacuumRobotAccessory.prototype = {
                             nogoLines,
                             function (error, result) {
                                 if (error) {
-                                    that.log.error(error + ": " + result);
+                                    that.log.error("Cannot start cleaning. " + error + ": " + result);
                                     callback(true);
                                 } else {
                                     callback();
@@ -315,7 +316,7 @@ NeatoVacuumRobotAccessory.prototype = {
                             });
                     }
                 } else {
-                    debug(that.name + ": Cant start, maybe already cleaning");
+                    debug(that.name + ": Cannot start, maybe already cleaning");
                     callback();
                 }
             } else {
@@ -463,7 +464,7 @@ NeatoVacuumRobotAccessory.prototype = {
             debug(this.name + ": Updating robot state");
             this.robot.getState(function (error, result) {
                 if (error) {
-                    that.log.error(error + ": " + result);
+                    that.log.error("Cannot update robot. Check if robot is online. " + error);
                 }
                 that.lastUpdate = new Date();
                 callback();
