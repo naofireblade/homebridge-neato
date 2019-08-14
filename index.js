@@ -40,21 +40,23 @@ NeatoVacuumRobotPlatform.prototype = {
 
         let that = this;
         this.getRobots(function () {
-            for (let i = 0; i < that.robots.length; i++) {
-                that.log("Found robot #" + (i + 1) + " named \"" + that.robots[i].name + "\" with serial \"" + that.robots[i]._serial + "\"");
-                let robotAccessory = new NeatoVacuumRobotAccessory(that.robots[i], that);
-                accessories.push(robotAccessory);
-                if (that.robots[i].maps) {
-                    that.robots[i].maps.forEach((map) => {
-                        if (map.boundaries) {
-                            map.boundaries.forEach((boundary) => {
-                                if (boundary.type === "polygon") {
-                                    accessories.push(new NeatoVacuumRobotAccessory(that.robots[i], that, boundary))
-                                }
-                            })
-                        }
-                    })
-                }
+            if (that.robots) {
+                that.robots.forEach((robot, i) => {
+                    that.log("Found robot #" + (i + 1) + " named \"" + robot.name + "\" with serial \"" + robot._serial + "\"");
+                    let robotAccessory = new NeatoVacuumRobotAccessory(robot, that);
+                    accessories.push(robotAccessory);
+                    if (robot.maps) {
+                        robot.maps.forEach((map) => {
+                            if (map.boundaries) {
+                                map.boundaries.forEach((boundary) => {
+                                    if (boundary.type === "polygon") {
+                                        accessories.push(new NeatoVacuumRobotAccessory(robot, that, boundary))
+                                    }
+                                })
+                            }
+                        })
+                    }
+                })
             }
             callback(accessories);
         });
@@ -67,7 +69,7 @@ NeatoVacuumRobotPlatform.prototype = {
         client.authorize(this.email, this.password, false, (error) => {
             if (error) {
                 that.log(error);
-                that.log.error("Can't log on to neato cloud. Please check your credentials.");
+                that.log.error("Can't log on to neato cloud. Please check your internet connection and your credentials. Try again later if the neato servers have issues.");
                 callback();
             } else {
                 client.getRobots((error, robots) => {
