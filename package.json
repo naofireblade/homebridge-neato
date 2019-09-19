@@ -1,6 +1,6 @@
 {
   "name": "homebridge-neato",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "A Neato vacuum robot plugin for homebridge.",
   "license": "MIT",
   "keywords": [
@@ -35,7 +35,7 @@
     "url": "git://github.com/naofireblade/homebridge-neato.git"
   },
   "dependencies": {
-    "debug": "^2.2.0",
+    "debug": "^4.1.1",
     "node-botvac": ">=0.3.0",
     "uuid": "^3.3.2"
   }
