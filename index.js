@@ -1,5 +1,5 @@
 "use strict";
-var inherits = require('util').inherits,
+let inherits = require('util').inherits,
 	debug = require('debug')('homebridge-neato'),
 	botvac = require('node-botvac'),
 
@@ -143,7 +143,7 @@ NeatoVacuumRobotPlatform.prototype = {
 												map.boundaries = result.boundaries;
 											}
 											processedMapCount++;
-											if (processedMapCount == robot.maps.length)
+											if (processedMapCount === robot.maps.length)
 											{
 												updatedRobotCount++;
 												if (updatedRobotCount === that.robots.length)

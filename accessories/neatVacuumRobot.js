@@ -256,7 +256,7 @@ NeatoVacuumRobotAccessory.prototype = {
 		});
 	},
 
-	clean: function (callback, boundaryId)
+	clean: function (callback, boundary)
 	{
 		// Start automatic update while cleaning
 		if (this.refresh === 'auto')
