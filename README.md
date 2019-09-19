@@ -5,8 +5,8 @@
 
 This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to control your [Neato](https://www.neatorobotics.com/) vacuum robot. You can download it via [npm](https://www.npmjs.com/package/homebridge-neato).
 
-If you like this plugin, I would be very grateful for any support to stay awake while coding:  
-<a href="https://www.buymeacoffee.com/2D1nUuK36" target="_blank"><img src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
+If you like this plugin, I would be very grateful for any support.  
+<a href="https://www.buymeacoffee.com/2D1nUuK36" target="_blank"><img width="130" src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee"></a>
 
 Feel free to leave any feedback [here](https://github.com/naofireblade/homebridge-neato/issues).
 
