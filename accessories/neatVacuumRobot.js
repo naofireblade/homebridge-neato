@@ -100,7 +100,7 @@ NeatoVacuumRobotAccessory.prototype = {
 		.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
 		.setCharacteristic(Characteristic.Model, "Coming soon")
 		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
-		if (!this.boundary)
+		if (typeof this.boundary === "undefined")
 		{
 			this.informationService
 			.setCharacteristic(Characteristic.Name, this.robot.name)
@@ -116,10 +116,16 @@ NeatoVacuumRobotAccessory.prototype = {
 
 		this.services = [this.informationService, this.vacuumRobotBatteryService];
 
-		if (!this.boundary)
+		if (typeof this.boundary === "undefined")
 		{
-			this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('set', this.setClean.bind(this));
-			this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('get', this.getClean.bind(this));
+			this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('set', (on, serviceCallback) =>
+			{
+				this.setClean(on, serviceCallback, this.boundary)
+			});
+			this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).on('get', (serviceCallback) =>
+			{
+				this.getClean(serviceCallback, this.boundary);
+			});
 
 			this.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).on('set', this.setGoToDock.bind(this));
 			this.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).on('get', this.getGoToDock.bind(this));
@@ -153,8 +159,7 @@ NeatoVacuumRobotAccessory.prototype = {
 			if (this.hiddenServices.indexOf('schedule') === -1)
 				this.services.push(this.vacuumRobotScheduleService);
 		}
-
-		if (this.boundary)
+		else
 		{
 			this.vacuumRobotCleanBoundaryService.getCharacteristic(Characteristic.On).on('set', (on, serviceCallback) =>
 			{
@@ -185,7 +190,7 @@ NeatoVacuumRobotAccessory.prototype = {
 				cleaning = this.robot.canPause && (this.robot.cleaningBoundaryId === boundary.id)
 			}
 
-			debug(this.name + ": Is cleaning: " + cleaning);
+			debug(this.name + ": Cleaning is " + (cleaning ? 'ON' : 'OFF'));
 			callback(false, cleaning);
 		});
 	},
@@ -197,6 +202,8 @@ NeatoVacuumRobotAccessory.prototype = {
 			// Start
 			if (on)
 			{
+				debug(typeof boundary);
+				debug(boundary);
 				// No room given or same room
 				if (typeof boundary === 'undefined' || this.robot.cleaningBoundaryId === boundary.id)
 				{
@@ -225,7 +232,8 @@ NeatoVacuumRobotAccessory.prototype = {
 					if (this.robot.canPause || this.robot.canResume)
 					{
 						debug(this.name + ": Returning to dock to start cleaning of new room");
-						this.setGoToDock(true, (error, result) => {
+						this.setGoToDock(true, (error, result) =>
+						{
 							this.nextRoom = boundary;
 
 							setTimeout(() =>
@@ -274,8 +282,8 @@ NeatoVacuumRobotAccessory.prototype = {
 		let eco = this.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
 		let extraCare = this.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
 		let nogoLines = this.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
-		let room = typeof boundary === 'undefined' ? '' : boundary.name;
-		debug(that.name + ": Start cleaning (" + room + " eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
+		let room = (typeof boundary === 'undefined') ? '' : boundary.name;
+		debug(this.name + ": Start cleaning (" + room + " eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
 
 		// Normal cleaning
 		if (typeof boundary === 'undefined')
@@ -533,7 +541,8 @@ NeatoVacuumRobotAccessory.prototype = {
 			// Robot has a next room to clean in queue
 			if (this.nextRoom !== null && this.robot.isDocked)
 			{
-				this.clean((error, result) => {
+				this.clean((error, result) =>
+				{
 					this.nextRoom = null;
 				}, this.nextRoom);
 			}
@@ -554,7 +563,7 @@ NeatoVacuumRobotAccessory.prototype = {
 			// robot is not cleaning, no specific refresh interval is set -> stop updating
 			else
 			{
-				debug(this.name + ": Disabled background updates");
+				debug(this.name + ": Disabled Background Updates");
 			}
 		});
 	},
