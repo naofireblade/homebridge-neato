@@ -19,6 +19,7 @@ function NeatoVacuumRobotAccessory(robot, platform, boundary = undefined)
 	this.refresh = platform.refresh;
 	this.hiddenServices = platform.hiddenServices;
 	this.robot = robot;
+	this.nextRoom = null;
 
 	if (typeof boundary === 'undefined')
 	{
@@ -220,12 +221,13 @@ NeatoVacuumRobotAccessory.prototype = {
 				// Different room given
 				else
 				{
-					// Stop current (running or paused) cleaning of old room
+					// Return to dock
 					if (this.robot.canPause || this.robot.canResume)
 					{
-						debug(this.name + ": Stop cleaning to start cleaning of new room");
-						this.robot.stopCleaning((error, result) =>
-						{
+						debug(this.name + ": Returning to dock to start cleaning of new room");
+						this.setGoToDock(true, (error, result) => {
+							this.nextRoom = boundary;
+
 							setTimeout(() =>
 							{
 								this.clean(callback, boundary);
@@ -249,7 +251,7 @@ NeatoVacuumRobotAccessory.prototype = {
 				}
 				else
 				{
-					debug(this.name + ": Already stopped");
+					debug(this.name + ": Already paused");
 					callback();
 				}
 			}
@@ -488,64 +490,71 @@ NeatoVacuumRobotAccessory.prototype = {
 
 	updateRobotTimer: function ()
 	{
-		let that = this;
 		this.updateRobot((error, result) =>
 		{
 
 			if (!this.boundary)
 			{
 				// only update these values if the state is different from the current one, otherwise we might accidentally start an action
-				if (that.vacuumRobotCleanService.getCharacteristic(Characteristic.On).value !== that.robot.canPause)
+				if (this.vacuumRobotCleanService.getCharacteristic(Characteristic.On).value !== this.robot.canPause)
 				{
-					that.vacuumRobotCleanService.setCharacteristic(Characteristic.On, that.robot.canPause);
+					this.vacuumRobotCleanService.setCharacteristic(Characteristic.On, this.robot.canPause);
 				}
 
 				// dock switch is on (dock not seen before) and dock has just been seen -> turn switch off
-				if (that.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).value == true && that.robot.dockHasBeenSeen)
+				if (this.vacuumRobotGoToDockService.getCharacteristic(Characteristic.On).value == true && this.robot.dockHasBeenSeen)
 				{
-					that.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, false);
+					this.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, false);
 				}
 
-				if (that.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== that.robot.isScheduleEnabled)
+				if (this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== this.robot.isScheduleEnabled)
 				{
-					that.vacuumRobotScheduleService.setCharacteristic(Characteristic.On, that.robot.isScheduleEnabled);
+					this.vacuumRobotScheduleService.setCharacteristic(Characteristic.On, this.robot.isScheduleEnabled);
 				}
 
 				// no commands here, values can be updated without problems
-				that.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, that.robot.isDocked ? 1 : 0);
-				that.vacuumRobotEcoService.setCharacteristic(Characteristic.On, that.robot.eco);
-				that.vacuumRobotNoGoLinesService.setCharacteristic(Characteristic.On, that.robot.noGoLines);
-				that.vacuumRobotExtraCareService.setCharacteristic(Characteristic.On, that.robot.navigationMode == 2 ? true : false);
+				this.vacuumRobotDockStateService.setCharacteristic(Characteristic.OccupancyDetected, this.robot.isDocked ? 1 : 0);
+				this.vacuumRobotEcoService.setCharacteristic(Characteristic.On, this.robot.eco);
+				this.vacuumRobotNoGoLinesService.setCharacteristic(Characteristic.On, this.robot.noGoLines);
+				this.vacuumRobotExtraCareService.setCharacteristic(Characteristic.On, this.robot.navigationMode == 2 ? true : false);
 
 			}
 			else
 			{
-				if (this.vacuumRobotCleanBoundaryService.getCharacteristic(Characteristic.On).value !== that.robot.canPause)
+				if (this.vacuumRobotCleanBoundaryService.getCharacteristic(Characteristic.On).value !== this.robot.canPause)
 				{
-					this.vacuumRobotCleanBoundaryService.setCharacteristic(Characteristic.On, that.robot.canPause);
+					this.vacuumRobotCleanBoundaryService.setCharacteristic(Characteristic.On, this.robot.canPause);
 				}
 			}
 
-			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, that.robot.charge);
-			that.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, that.robot.isCharging);
+			this.vacuumRobotBatteryService.setCharacteristic(Characteristic.BatteryLevel, this.robot.charge);
+			this.vacuumRobotBatteryService.setCharacteristic(Characteristic.ChargingState, this.robot.isCharging);
+
+			// Robot has a next room to clean in queue
+			if (this.nextRoom !== null && this.robot.isDocked)
+			{
+				this.clean((error, result) => {
+					this.nextRoom = null;
+				}, this.nextRoom);
+			}
 
 			// robot is currently cleaning, refresh is set to auto or specific interval -> continue updating
-			if (that.robot.canPause && that.refresh !== 0)
+			if (this.robot.canPause && this.refresh !== 0)
 			{
-				let refreshTime = that.refresh === 'auto' ? 60 : that.refresh;
-				debug(that.name + ": Updating state in background every " + refreshTime + " seconds while cleaning");
-				that.timer = setTimeout(that.updateRobotTimer.bind(that), refreshTime * 1000);
+				let refreshTime = this.refresh === 'auto' ? 60 : this.refresh;
+				debug(this.name + ": Updating state in background every " + refreshTime + " seconds while cleaning");
+				this.timer = setTimeout(this.updateRobotTimer.bind(this), refreshTime * 1000);
 			}
 			// robot is not cleaning, but a specific refresh interval is set -> continue updating
-			else if (that.refresh !== 'auto' && that.refresh !== 0)
+			else if (this.refresh !== 'auto' && this.refresh !== 0)
 			{
-				debug(that.name + ": Updating state in background every " + that.refresh + " seconds (user setting)");
-				that.timer = setTimeout(that.updateRobotTimer.bind(that), that.refresh * 1000);
+				debug(this.name + ": Updating state in background every " + this.refresh + " seconds (user setting)");
+				this.timer = setTimeout(this.updateRobotTimer.bind(this), this.refresh * 1000);
 			}
 			// robot is not cleaning, no specific refresh interval is set -> stop updating
 			else
 			{
-				debug(that.name + ": Disabled background updates");
+				debug(this.name + ": Disabled background updates");
 			}
 		});
 	},
