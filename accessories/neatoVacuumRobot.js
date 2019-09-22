@@ -11,17 +11,19 @@ module.exports = function (_Service, _Characteristic)
 	return NeatoVacuumRobotAccessory;
 };
 
-function NeatoVacuumRobotAccessory(robotObject, platform, boundary = undefined)
+function NeatoVacuumRobotAccessory(platform, robotObject, boundary = undefined)
 {
 	this.platform = platform;
-	this.boundary = boundary;
 	this.log = platform.log;
 	this.refresh = platform.refresh;
 	this.hiddenServices = platform.hiddenServices;
+
+	this.robotObject = robotObject;
 	this.robot = robotObject.device;
-	this.mainAccessory = robotObject.mainAccessory;
-	this.nextRoom = null;
 	this.meta = robotObject.meta;
+
+	this.boundary = boundary;
+	this.nextRoom = null;
 
 	if (typeof boundary === 'undefined')
 	{
@@ -277,9 +279,9 @@ NeatoVacuumRobotAccessory.prototype = {
 			}, 60 * 1000);
 		}
 
-		let eco = this.mainAccessory.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
-		let extraCare = this.mainAccessory.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
-		let nogoLines = this.mainAccessory.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
+		let eco = this.robotObject.mainAccessory.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
+		let extraCare = this.robotObject.mainAccessory.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
+		let nogoLines = this.robotObject.mainAccessory.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
 		let room = (typeof boundary === 'undefined') ? '' : boundary.name;
 		debug(this.name + ": ## Start cleaning (" + room + " eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
 

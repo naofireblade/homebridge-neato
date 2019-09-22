@@ -61,7 +61,7 @@ NeatoVacuumRobotPlatform.prototype = {
 				this.updateRobotTimer(robot.device._serial);
 
 				let NeatoVacuumRobotAccessory = require('./accessories/neatoVacuumRobot')(Service, Characteristic);
-				let mainAccessory = new NeatoVacuumRobotAccessory(robot, this);
+				let mainAccessory = new NeatoVacuumRobotAccessory(this, robot);
 				accessories.push(mainAccessory);
 
 				robot.mainAccessory = mainAccessory;
@@ -77,7 +77,7 @@ NeatoVacuumRobotPlatform.prototype = {
 							{
 								if (boundary.type === "polygon")
 								{
-									let roomAccessory = new NeatoVacuumRobotAccessory(robot, this, boundary);
+									let roomAccessory = new NeatoVacuumRobotAccessory(this, robot, boundary);
 									accessories.push(roomAccessory);
 
 									robot.roomAccessories.push(roomAccessory);
