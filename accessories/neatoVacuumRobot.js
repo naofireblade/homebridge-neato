@@ -19,6 +19,7 @@ function NeatoVacuumRobotAccessory(robotObject, platform, boundary = undefined)
 	this.refresh = platform.refresh;
 	this.hiddenServices = platform.hiddenServices;
 	this.robot = robotObject.device;
+	this.mainAccessory = robotObject.mainAccessory;
 	this.nextRoom = null;
 	this.meta = robotObject.meta;
 
@@ -59,6 +60,7 @@ function NeatoVacuumRobotAccessory(robotObject, platform, boundary = undefined)
 		this.vacuumRobotNoGoLinesService = new Service.Switch(this.name + " NoGo Lines", "noGoLines");
 		this.vacuumRobotExtraCareService = new Service.Switch(this.name + " Extra Care", "extraCare");
 		this.vacuumRobotScheduleService = new Service.Switch(this.name + " Schedule", "schedule");
+		this.vacuumRobotFindMeService = new Service.Switch(this.name + " Find Me", "findMe");
 	}
 	else
 	{
@@ -140,6 +142,9 @@ NeatoVacuumRobotAccessory.prototype = {
 			this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).on('set', this.setSchedule.bind(this));
 			this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).on('get', this.getSchedule.bind(this));
 
+			this.vacuumRobotFindMeService.getCharacteristic(Characteristic.On).on('set', this.setFindMe.bind(this));
+			this.vacuumRobotFindMeService.getCharacteristic(Characteristic.On).on('get', this.getFindMe.bind(this));
+
 			this.vacuumRobotBatteryService.getCharacteristic(Characteristic.BatteryLevel).on('get', this.getBatteryLevel.bind(this));
 			this.vacuumRobotBatteryService.getCharacteristic(Characteristic.ChargingState).on('get', this.getBatteryChargingState.bind(this));
 
@@ -158,6 +163,8 @@ NeatoVacuumRobotAccessory.prototype = {
 				this.services.push(this.vacuumRobotExtraCareService);
 			if (this.hiddenServices.indexOf('schedule') === -1)
 				this.services.push(this.vacuumRobotScheduleService);
+			// if (this.hiddenServices.indexOf('find') === -1)
+			// 	this.services.push(this.vacuumRobotFindMeService);
 		}
 		else
 		{
@@ -270,10 +277,9 @@ NeatoVacuumRobotAccessory.prototype = {
 			}, 60 * 1000);
 		}
 
-
-		let eco = this.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
-		let extraCare = this.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
-		let nogoLines = this.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
+		let eco = this.mainAccessory.vacuumRobotEcoService.getCharacteristic(Characteristic.On).value;
+		let extraCare = this.mainAccessory.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
+		let nogoLines = this.mainAccessory.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
 		let room = (typeof boundary === 'undefined') ? '' : boundary.name;
 		debug(this.name + ": ## Start cleaning (" + room + " eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
 
@@ -406,10 +412,10 @@ NeatoVacuumRobotAccessory.prototype = {
 
 	getSchedule: function (callback)
 	{
-		this.platform.updateRobot(this.robot._serial,() =>
+		this.platform.updateRobot(this.robot._serial, () =>
 		{
 			debug(this.name + ": Schedule is " + (this.robot.eco ? 'ON' : 'OFF'));
-			callback(false, this.robot.isScheduleEnabled );
+			callback(false, this.robot.isScheduleEnabled);
 		});
 	},
 
@@ -428,6 +434,25 @@ NeatoVacuumRobotAccessory.prototype = {
 				this.robot.disableSchedule(callback);
 			}
 		});
+	},
+
+	getFindMe: function (callback)
+	{
+		callback(false, false);
+	},
+
+	setFindMe: function (on, callback)
+	{
+		if (on)
+		{
+			debug(this.name + ": ## Find me");
+			setTimeout(() =>
+			{
+				this.vacuumRobotFindMeService.setCharacteristic(Characteristic.On, false);
+			}, 1000);
+
+			this.robot.findMe(callback);
+		}
 	},
 
 	getDock: function (callback)
@@ -473,9 +498,9 @@ NeatoVacuumRobotAccessory.prototype = {
 				this.vacuumRobotGoToDockService.setCharacteristic(Characteristic.On, false);
 			}
 
-			if (this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== this.robot.isScheduleEnabled )
+			if (this.vacuumRobotScheduleService.getCharacteristic(Characteristic.On).value !== this.robot.isScheduleEnabled)
 			{
-				this.vacuumRobotScheduleService.setCharacteristic(Characteristic.On, this.robot.isScheduleEnabled );
+				this.vacuumRobotScheduleService.setCharacteristic(Characteristic.On, this.robot.isScheduleEnabled);
 			}
 
 			// no commands here, values can be updated without problems

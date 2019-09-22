@@ -48,9 +48,7 @@ function NeatoVacuumRobotPlatform(log, config)
 NeatoVacuumRobotPlatform.prototype = {
 	accessories: function (callback)
 	{
-		debug("##############################################");
-		debug("################# GET ROBOTS #################");
-		debug("##############################################");
+		debug("Get robots");
 		let accessories = [];
 		this.boundaryNames = [];
 		this.getRobots(() =>
