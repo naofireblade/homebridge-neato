@@ -107,3 +107,5 @@
 * Fixed room switches not taking eco and extraCare mode into account
 * Fixed room switches to support pause/resume of cleaning
 * Added feature that enabling another room switch, returns to robot to dock and starts cleaning the new room automatically
+* Improved requests for multiple rooms (TODO)
+* Added model and firmware information to homekit

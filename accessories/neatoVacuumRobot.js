@@ -20,6 +20,7 @@ function NeatoVacuumRobotAccessory(robotObject, platform, boundary = undefined)
 	this.hiddenServices = platform.hiddenServices;
 	this.robot = robotObject.device;
 	this.nextRoom = null;
+	this.meta = robotObject.meta;
 
 	if (typeof boundary === 'undefined')
 	{
@@ -51,7 +52,7 @@ function NeatoVacuumRobotAccessory(robotObject, platform, boundary = undefined)
 
 	if (typeof boundary === 'undefined')
 	{
-		this.vacuumRobotCleanService = new Service.Switch("Clean", "clean");
+		this.vacuumRobotCleanService = new Service.Switch(this.name + " Clean", "clean");
 		this.vacuumRobotGoToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
 		this.vacuumRobotDockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
 		this.vacuumRobotEcoService = new Service.Switch(this.name + " Eco Mode", "eco");
@@ -95,8 +96,9 @@ NeatoVacuumRobotAccessory.prototype = {
 		this.informationService = new Service.AccessoryInformation();
 		this.informationService
 		.setCharacteristic(Characteristic.Manufacturer, "Neato Robotics")
-		.setCharacteristic(Characteristic.Model, "Coming soon")
-		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial);
+		.setCharacteristic(Characteristic.Model, this.meta.modelName)
+		.setCharacteristic(Characteristic.SerialNumber, this.robot._serial)
+		.setCharacteristic(Characteristic.FirmwareRevision, this.meta.firmware);
 		if (typeof this.boundary === "undefined")
 		{
 			this.informationService
@@ -200,15 +202,13 @@ NeatoVacuumRobotAccessory.prototype = {
 			// Start
 			if (on)
 			{
-				debug(typeof boundary);
-				debug(boundary);
 				// No room given or same room
 				if (typeof boundary === 'undefined' || this.robot.cleaningBoundaryId === boundary.id)
 				{
 					// Resume cleaning
 					if (this.robot.canResume)
 					{
-						debug(this.name + ": Resume cleaning");
+						debug(this.name + ": ## Resume cleaning");
 						this.robot.resumeCleaning(callback);
 					}
 					// Start cleaning
@@ -229,7 +229,7 @@ NeatoVacuumRobotAccessory.prototype = {
 					// Return to dock
 					if (this.robot.canPause || this.robot.canResume)
 					{
-						debug(this.name + ": Returning to dock to start cleaning of new room");
+						debug(this.name + ": ## Returning to dock to start cleaning of new room");
 						this.setGoToDock(true, (error, result) =>
 						{
 							this.nextRoom = boundary;
@@ -247,7 +247,7 @@ NeatoVacuumRobotAccessory.prototype = {
 			{
 				if (this.robot.canPause)
 				{
-					debug(this.name + ": Pause cleaning");
+					debug(this.name + ": ## Pause cleaning");
 					this.robot.pauseCleaning(callback);
 				}
 				else
@@ -275,7 +275,7 @@ NeatoVacuumRobotAccessory.prototype = {
 		let extraCare = this.vacuumRobotExtraCareService.getCharacteristic(Characteristic.On).value;
 		let nogoLines = this.vacuumRobotNoGoLinesService.getCharacteristic(Characteristic.On).value;
 		let room = (typeof boundary === 'undefined') ? '' : boundary.name;
-		debug(this.name + ": Start cleaning (" + room + " eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
+		debug(this.name + ": ## Start cleaning (" + room + " eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ")");
 
 		// Normal cleaning
 		if (typeof boundary === 'undefined')
@@ -328,19 +328,19 @@ NeatoVacuumRobotAccessory.prototype = {
 			{
 				if (this.robot.canPause)
 				{
-					debug(this.name + ": Pause cleaning to go to dock");
+					debug(this.name + ": ## Pause cleaning to go to dock");
 					this.robot.pauseCleaning((error, result) =>
 					{
 						setTimeout(() =>
 						{
-							debug(this.name + ": Go to dock");
+							debug(this.name + ": ## Go to dock");
 							this.robot.sendToBase(callback);
 						}, 1000);
 					});
 				}
 				else if (this.robot.canGoToBase)
 				{
-					debug(this.name + ": Go to dock");
+					debug(this.name + ": ## Go to dock");
 					this.robot.sendToBase(callback);
 				}
 				else
@@ -502,7 +502,7 @@ NeatoVacuumRobotAccessory.prototype = {
 			this.clean((error, result) =>
 			{
 				this.nextRoom = null;
-				debug("Starting cleaning of next room");
+				debug("## Starting cleaning of next room");
 			}, this.nextRoom);
 		}
 	}

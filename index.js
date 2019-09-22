@@ -58,6 +58,8 @@ NeatoVacuumRobotPlatform.prototype = {
 			this.robots.forEach((robot, i) =>
 			{
 				this.log("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial + "\"");
+
+				// Start Update Intervall
 				this.updateRobotTimer(robot.device._serial);
 
 				let NeatoVacuumRobotAccessory = require('./accessories/neatoVacuumRobot')(Service, Characteristic);
@@ -162,14 +164,26 @@ NeatoVacuumRobotPlatform.prototype = {
 											// Robot is completely requested if all maps are requested
 											if (requestedMap === robot.maps.length)
 											{
-												this.robots.push({device: robot});
-												requestedRobot++;
-
-												// Initial request is complete if all robots are requested.
-												if (requestedRobot === robots.length)
+												// Get additional information
+												robot.getState((error, result) =>
 												{
-													callback();
-												}
+													if (error)
+													{
+														this.log.error("Error getting robot meta information: " + error + ": " + result);
+														callback();
+													}
+													else
+													{
+														this.robots.push({device: robot, meta: result.meta});
+														requestedRobot++;
+
+														// Initial request is complete if all robots are requested.
+														if (requestedRobot === robots.length)
+														{
+															callback();
+														}
+													}
+												});
 											}
 										})
 									});
@@ -194,7 +208,7 @@ NeatoVacuumRobotPlatform.prototype = {
 		else
 		{
 			debug(robot.device.name + ": ++ Updating robot state");
-			robot.device.getState(function (error, result)
+			robot.device.getState((error, result) =>
 			{
 				if (error)
 				{
