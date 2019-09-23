@@ -5,23 +5,32 @@
 
 This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to control your [Neato](https://www.neatorobotics.com/) vacuum robot. You can download it via [npm](https://www.npmjs.com/package/homebridge-neato).
 
+If you like this plugin, I would be very grateful for your support:
+
+<a href="https://www.buymeacoffee.com/2D1nUuK36" target="_blank"><img width="140" src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee"></a>
+
 Feel free to leave any feedback [here](https://github.com/naofireblade/homebridge-neato/issues).
 
 ## Features
 
-- Start and pause cleaning
-- Start and pause spot cleaning
+- Start and pause house cleaning
+  - Eco mode
+  - Extra care navigation
+  - Nogo lines
+  - Zones
+- Spot cleaning
+  - 2x2 or 4x4
+  - repeat
 - Return to dock
-- Toggle schedule
-- Toggle eco mode
-- Toggle extra care navigation
-- Toggle nogo lines
-- Toggle 4x4 mode (spot)
-- Toggle repeat mode (spot)
-- Get battery info
-- Get dock info
-- Periodic refresh of robot state
-- Support for multiple robots
+- Find the robot
+- Enable/Disable the schedule
+- Robot information
+  - battery level
+  - charging state
+  - dock occupancy
+  - model and firmware version
+- Automatic and periodic refresh for notifications
+- Multiple robots
 
 ## Installation
 
@@ -50,9 +59,9 @@ Add the following information to your config file. Change the values for email a
 
 The following config contains advanced optional settings.
 
-The parameter **refresh** sets an interval in seconds that is used to update the robot state in the background. This is only required for automations based on the robot state. The default value is `auto` which means that the update is automatically enabled while cleaning and disabled while not cleaning. You can set a value in seconds e.g. `120` to enable background updates even when the robot is not cleaning. You can also disable background updates completely by setting the value `0`. This might be required if you experience timeouts in the app because you have other home automation apps that are connected to your robot.
+The parameter **refresh** is default set to auto and updates the robot state when the cleaning was started via homekit so that you can activate automations after the cleaning is done. If you want to get robot state updates after starting the cleaning from the neato app or a schedule, you have to set refresh to a static value in seconds e.g. `120`. You can disable background updates completely by setting this to `0`.
 
-The parameter **disabled** accepts a list of switches/sensors that can be disabled in the neato homekit plugin (e.g. dock, dockstate, eco, schedule, spot).
+The parameter **disabled** accepts a list of switches/sensors that can be disabled in the neato homekit plugin (e.g. `dock`, `dockstate`, `eco`, `schedule`, `findme`, `spot`, `spotrepeat`, `spot4x4`).
 
 ```json
 "platforms": [
@@ -68,13 +77,16 @@ The parameter **disabled** accepts a list of switches/sensors that can be disabl
 
 ## Tested robots
 
-- BotVac Connected (Firmware 2.2.0)
+- BotVac Connected
 - BotVac D3 Connected
-- BotVac D5 Connected (Firmware 4.0.0, 4.3.0)
+- BotVac D4 Connected
+- BotVac D5 Connected
+- BotVac D6 Connected
 - BotVac D7 Connected
-
-The plugin should work with D4 and D6 as well. If you have connected neato robot, please [tell me](https://github.com/naofireblade/homebridge-neato/issues) about your experience with this plugin.
 
 ## Contributors
 Many thanks go to
 - [ghulands](https://github.com/ghulands) for finding and fixing a bug when no robot is associated with the neato account
+- [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
+- [Antoine de Maleprade](https://github.com/az0uz) for adding the zone cleaning feature
+- [DJay](https://github.com/DJay-X) for testing out new beta versions

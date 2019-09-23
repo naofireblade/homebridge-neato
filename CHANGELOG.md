@@ -79,3 +79,33 @@
 ## 0.5.1
 
 * Updated node-botvac dependency to 0.1.7
+
+## 0.5.2
+
+* Added schema file for use with homebridge-config-ui-x
+
+## 0.6.0
+
+* Added support for zone cleaning
+
+## 0.6.1
+
+* Fixed homebridge startup failed when robot does not support zone cleaning
+
+## 0.6.2
+
+* Fixed homebridge startup failed when robot does not support mapping
+
+## 0.6.3
+
+* Fixed homebridge crash when robot has a map without zones
+* Fixed homebridge crash when homebridge has no internet connection or the neato servers are offline
+* Fixed homebridge crash when 2 zones have the same name
+
+## 0.7.0
+
+* Fixed room switches not taking eco and extraCare mode into account
+* Fixed room switches to support pause/resume of cleaning
+* Added feature that enabling another room switch, returns to robot to dock and starts cleaning the new room automatically
+* Improved requests for multiple rooms (TODO)
+* Added model and firmware information to homekit
