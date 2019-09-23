@@ -172,7 +172,7 @@ NeatoVacuumRobotPlatform.prototype = {
 													}
 													else
 													{
-														this.robots.push({device: robot, meta: result.meta});
+														this.robots.push({device: robot, meta: result.meta, availableServices: result.availableServices});
 														requestedRobot++;
 
 														// Initial request is complete if all robots are requested.

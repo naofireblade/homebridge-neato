@@ -109,3 +109,5 @@
 * Added feature that enabling another room switch, returns to robot to dock and starts cleaning the new room automatically
 * Improved requests for multiple rooms (TODO)
 * Added model and firmware information to homekit
+* Added find me function
+* Added spot cleaning function with individual spot size and repeat option
