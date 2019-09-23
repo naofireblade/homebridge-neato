@@ -187,6 +187,7 @@ NeatoVacuumRobotAccessory.prototype = {
 				this.spotCleanAdvancedService.getCharacteristic(SpotRepeatCharacteristic).on('set', this.setSpotRepeat.bind(this));
 				this.spotCleanAdvancedService.getCharacteristic(SpotRepeatCharacteristic).on('get', this.getSpotRepeat.bind(this));
 				this.spotCleanAdvancedService.getCharacteristic(SpotWidthCharacteristic).on('set', this.setSpotWidth.bind(this));
+				this.spotCleanAdvancedService.getCharacteristic(SpotWidthCharacteristic).on('get', this.getSpotWidth.bind(this));
 				this.spotCleanAdvancedService.getCharacteristic(SpotHeightCharacteristic).on('set', this.setSpotHeight.bind(this));
 				this.spotCleanAdvancedService.getCharacteristic(SpotHeightCharacteristic).on('get', this.getSpotHeight.bind(this));
 
@@ -262,6 +263,7 @@ NeatoVacuumRobotAccessory.prototype = {
 
 	setClean: function (on, callback, boundary)
 	{
+		debug(this.name + ": " + (on ? "Enabled " : "Disabled") + " Clean " + boundary);
 		this.platform.updateRobot(this.robot._serial, (error, result) =>
 		{
 			// Start
@@ -658,7 +660,8 @@ NeatoVacuumRobotAccessory.prototype = {
 		if (!this.boundary)
 		{
 			// only update these values if the state is different from the current one, otherwise we might accidentally start an action
-			if (this.cleanService.getCharacteristic(Characteristic.On).value !== this.robot.canPause)
+			// AND dont set a clean switch to on if it's a room switch, otherwise we start the cleaning of each room at once
+			if (this.cleanService.getCharacteristic(Characteristic.On).value !== this.robot.canPause && (typeof this.boundary === 'undefined'))
 			{
 				this.cleanService.setCharacteristic(Characteristic.On, this.robot.canPause);
 			}
