@@ -222,8 +222,8 @@ NeatoVacuumRobotAccessory.prototype = {
 				this.services.push(this.extraCareService);
 			if (this.hiddenServices.indexOf('schedule') === -1)
 				this.services.push(this.scheduleService);
-			// if (this.hiddenServices.indexOf('find') === -1)
-			// 	this.services.push(this.vacuumRobotFindMeService);
+			if (this.hiddenServices.indexOf('find') === -1)
+				this.services.push(this.findMeService);
 		}
 		else
 		{
