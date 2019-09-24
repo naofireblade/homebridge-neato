@@ -35,10 +35,6 @@ function NeatoVacuumRobotAccessory(platform, robotObject, boundary = undefined)
 	this.boundary = boundary;
 	this.nextRoom = null;
 
-	SpotWidthCharacteristic = require('../characteristics/spotWidth')(Characteristic, CustomUUID);
-	SpotHeightCharacteristic = require('../characteristics/spotHeight')(Characteristic, CustomUUID);
-	SpotRepeatCharacteristic = require('../characteristics/spotRepeat')(Characteristic, CustomUUID);
-
 	if (typeof boundary === 'undefined')
 	{
 		this.name = this.robot.name;
@@ -78,6 +74,10 @@ function NeatoVacuumRobotAccessory(platform, robotObject, boundary = undefined)
 		this.scheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 		this.findMeService = new Service.Switch(this.name + " Find Me", "findMe");
 
+		SpotWidthCharacteristic = require('../characteristics/spotWidth')(Characteristic, CustomUUID);
+		SpotHeightCharacteristic = require('../characteristics/spotHeight')(Characteristic, CustomUUID);
+		SpotRepeatCharacteristic = require('../characteristics/spotRepeat')(Characteristic, CustomUUID);
+
 		// Spot cleaning with advanced options
 		if ((typeof this.availableServices.spotCleaning !== 'undefined') && this.availableServices.spotCleaning.includes("basic"))
 		{
@@ -92,6 +92,7 @@ function NeatoVacuumRobotAccessory(platform, robotObject, boundary = undefined)
 			this.spotCleanSimpleService = new Service.Switch(this.name + " Clean Spot", "cleanSpot");
 			this.spotCleanSimpleService.addCharacteristic(SpotRepeatCharacteristic);
 		}
+		this.log("Added default cleaning device named: " + this.name);
 	}
 	else
 	{
@@ -101,9 +102,8 @@ function NeatoVacuumRobotAccessory(platform, robotObject, boundary = undefined)
 		{
 			serviceName = "Clean " + boundary.name;
 		}
-		this.cleanBoundaryService =
-			new Service.Switch(serviceName, "cleanBoundary:" + boundary.id);
-		this.log("Adding zone cleaning for: " + boundary.name);
+		this.cleanBoundaryService = new Service.Switch(serviceName, "cleanBoundary:" + boundary.id);
+		this.log("Added zone cleaning for: " + boundary.name);
 	}
 }
 
@@ -632,7 +632,7 @@ NeatoVacuumRobotAccessory.prototype = {
 	{
 		this.platform.updateRobot(this.robot._serial, () =>
 		{
-			debug(this.name + ": The Dock is " + (this.robot.isDocked ? '' : 'un ') + "occupied");
+			debug(this.name + ": The Dock is " + (this.robot.isDocked ? '' : 'NOT ') + "OCCUPIED");
 			callback(false, this.robot.isDocked ? 1 : 0);
 		});
 	},
@@ -650,7 +650,7 @@ NeatoVacuumRobotAccessory.prototype = {
 	{
 		this.platform.updateRobot(this.robot._serial, () =>
 		{
-			debug(this.name + ": Battery  is " + (this.robot.isCharging ? '' : 'not ') + "charging");
+			debug(this.name + ": Battery  is " + (this.robot.isCharging ? '' : 'NOT ') + "CHARGING");
 			callback(false, this.robot.isCharging);
 		});
 	},

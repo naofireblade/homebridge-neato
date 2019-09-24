@@ -55,7 +55,7 @@ NeatoVacuumRobotPlatform.prototype = {
 		{
 			this.robots.forEach((robot, i) =>
 			{
-				this.log("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial + "\"");
+				this.log("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial.substring(0,9) + "XXXXXXXXXXXX\"");
 
 				// Start Update Intervall
 				this.updateRobotTimer(robot.device._serial);
@@ -66,6 +66,11 @@ NeatoVacuumRobotPlatform.prototype = {
 
 				robot.mainAccessory = mainAccessory;
 				robot.roomAccessories = [];
+
+				// For testing purposes only
+				// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot, {name: "Testzimmer", id: "1"});
+				// accessories.push(roomAccessory);
+				// robot.roomAccessories.push(roomAccessory);
 
 				if (robot.device.maps)
 				{
@@ -206,13 +211,13 @@ NeatoVacuumRobotPlatform.prototype = {
 		else
 		{
 			debug(robot.device.name + ": ++ Updating robot state");
+			robot.lastUpdate = new Date();
 			robot.device.getState((error, result) =>
 			{
 				if (error)
 				{
 					this.log.error("Cannot update robot. Check if robot is online. " + error);
 				}
-				robot.lastUpdate = new Date();
 				callback();
 			});
 		}
