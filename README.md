@@ -5,7 +5,7 @@
 
 This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to control your [Neato](https://www.neatorobotics.com/) vacuum robot. You can download it via [npm](https://www.npmjs.com/package/homebridge-neato).
 
-If you like this plugin, I would be very grateful for your support:
+If you like this plugin and find it useful, I would be very grateful for your support:
 
 <a href="https://www.buymeacoffee.com/2D1nUuK36" target="_blank"><img width="140" src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee"></a>
 
@@ -13,23 +13,23 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 ## Features
 
-- Start and pause house cleaning
+- House Cleaning
   - Eco mode
   - Extra care navigation
   - Nogo lines
-  - Zones
+- Zone cleaning
 - Spot cleaning
-  - individual spot size (only D7)
-  - repeat
+  - Individual spot size (only D7)
+  - Clean twice
 - Return to dock
 - Find the robot
-- Enable/Disable the schedule
+- Schedule (de)activation
 - Robot information
-  - battery level
-  - charging state
-  - dock occupancy
-  - model and firmware version
-- Automatic and periodic refresh for notifications
+  - Battery level
+  - Charging state
+  - Dock occupancy
+  - Model and firmware version
+- Automatic or periodic refresh of robot state
 - Multiple robots
 
 ## Installation
@@ -89,4 +89,4 @@ Many thanks go to
 - [ghulands](https://github.com/ghulands) for finding and fixing a bug when no robot is associated with the neato account
 - [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
 - [Antoine de Maleprade](https://github.com/az0uz) for adding the zone cleaning feature
-- [DJay](https://github.com/DJay-X) for testing out new beta versions
+- [DJay](https://github.com/DJay-X) for testing out tons of new beta versions

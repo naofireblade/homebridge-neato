@@ -4,7 +4,7 @@ module.exports = function (Characteristic, CustomUUID)
 {
 	let SpotRepeat = function ()
 	{
-		Characteristic.call(this, 'Spot ↺', CustomUUID.SpotCleanRepeat);
+		Characteristic.call(this, 'Spot 2x', CustomUUID.SpotCleanRepeat);
 		this.setProps({
 			format: Characteristic.Formats.BOOL,
 			perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE]
