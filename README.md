@@ -1,11 +1,11 @@
 # homebridge-neato
-[![npm](https://img.shields.io/npm/v/homebridge-neato.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-neato)
-[![npm](https://img.shields.io/npm/dt/homebridge-neato.svg?style=flat-square)](https://www.npmjs.com/package/homebridge-neato)
-[![GitHub last commit](https://img.shields.io/github/last-commit/naofireblade/homebridge-neato.svg?style=flat-square)](https://github.com/naofireblade/homebridge-neato)
+[![npm](https://img.shields.io/npm/v/homebridge-neato)](https://www.npmjs.com/package/homebridge-neato)
+[![npm](https://img.shields.io/npm/dt/homebridge-neato)](https://www.npmjs.com/package/homebridge-neato?activeTab=versions)
+[![GitHub last commit](https://img.shields.io/github/last-commit/naofireblade/homebridge-neato)](https://github.com/naofireblade/homebridge-neato)
 
 This is a plugin for [homebridge](https://github.com/nfarina/homebridge) to control your [Neato](https://www.neatorobotics.com/) vacuum robot. You can download it via [npm](https://www.npmjs.com/package/homebridge-neato).
 
-If you like this plugin and find it useful, I would be very grateful for your support:
+If you like this plugin and find it useful, I would be forever grateful for your support:
 
 <a href="https://www.buymeacoffee.com/2D1nUuK36" target="_blank"><img width="140" src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee"></a>
 
@@ -36,7 +36,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 
 1. Install homebridge using: `npm install -g homebridge`
 2. Install this plugin using: `npm install -g homebridge-neato`
-3. If you don't have a Neato account yet create one [here](https://www.neatorobotics.com/create-account/).
+3. If you don't have a Neato account yet, create one [here](https://www.neatorobotics.com/create-account/).
 4. Update your configuration file. See the sample below.
 
 ## Configuration
@@ -59,9 +59,9 @@ Add the following information to your config file. Change the values for email a
 
 The following config contains advanced optional settings.
 
-The parameter **refresh** is default set to auto and updates the robot state when the cleaning was started via homekit so that you can activate automations after the cleaning is done. If you want to get robot state updates after starting the cleaning from the neato app or a schedule, you have to set refresh to a static value in seconds e.g. `120`. You can disable background updates completely by setting this to `0`.
+The parameter **refresh** is default set to auto and updates the robot state when a cleaning was started via homekit so that you can activate automations based on a successful cleaning. If you want to get robot state updates after starting the cleaning from outside of homekit as well (neato app or schedule), you have to set refresh to a static value in seconds e.g. `120`. You can disable background updates completely by setting this to `0`.
 
-The parameter **disabled** accepts a list of switches/sensors that can be disabled in the neato homekit plugin (e.g. `dock`, `dockstate`, `eco`, `schedule`, `findme`, `spot`).
+The parameter **hidden** accepts a list of switches/sensors that can be hidden from homekit (e.g. `dock`, `dockstate`, `eco`, `schedule`, `find`, `spot`).
 
 ```json
 "platforms": [
@@ -70,23 +70,18 @@ The parameter **disabled** accepts a list of switches/sensors that can be disabl
 		"email": "YourEmail",
 		"password": "YourPassword",
 		"refresh": "120",
-		"disabled": ["dock", "dockstate", "eco", "nogolines", "extracare", "schedule", "findme", "spot"]
+		"hidden": ["dock", "dockstate", "eco", "nogolines", "extracare", "schedule", "find", "spot"]
 	}
 ]
 ```
 
 ## Tested robots
 
-- BotVac Connected
-- BotVac D3 Connected
-- BotVac D4 Connected
-- BotVac D5 Connected
-- BotVac D6 Connected
-- BotVac D7 Connected
+The plugin is successfully tested with all Neato Connected Robots.
 
 ## Contributors
 Many thanks go to
 - [ghulands](https://github.com/ghulands) for finding and fixing a bug when no robot is associated with the neato account
 - [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
 - [Antoine de Maleprade](https://github.com/az0uz) for adding the zone cleaning feature
-- [DJay](https://github.com/DJay-X) for testing out tons of new beta versions
+- [DJay](https://github.com/DJay-X) for testing tons of new beta versions

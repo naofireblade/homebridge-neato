@@ -19,7 +19,9 @@ function NeatoVacuumRobotPlatform(log, config)
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
-	this.hiddenServices = ('disabled' in config ? config['disabled'] : '');
+	this.hiddenServices = '';
+	this.hiddenServices = ('disabled' in config ? config['disabled'] : this.hiddenServices);
+	this.hiddenServices = ('hidden' in config ? config['hidden'] : this.hiddenServices);
 
 	// Array of real robots and associated robot accessories (incl rooms)
 	this.robots = [];
@@ -68,7 +70,7 @@ NeatoVacuumRobotPlatform.prototype = {
 				robot.roomAccessories = [];
 
 				// For testing purposes only
-				// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot, {name: "Testzimmer", id: "1"});
+				// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot, {name: "Testroom", id: "1"});
 				// accessories.push(roomAccessory);
 				// robot.roomAccessories.push(roomAccessory);
 
