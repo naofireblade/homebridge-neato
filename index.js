@@ -25,6 +25,7 @@ function NeatoVacuumRobotPlatform(log, config)
 
 	// Array of real robots and associated robot accessories (incl rooms)
 	this.robots = [];
+	this.nextRoom = null;
 
 	if ('refresh' in config && config['refresh'] !== 'auto')
 	{
@@ -70,29 +71,31 @@ NeatoVacuumRobotPlatform.prototype = {
 				robot.roomAccessories = [];
 
 				// For testing purposes only
-				// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot, {name: "Testroom", id: "1"});
-				// accessories.push(roomAccessory);
-				// robot.roomAccessories.push(roomAccessory);
+				robot.boundary = {name: "Testroom", id: "1"};
+				let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+				accessories.push(roomAccessory);
+				robot.roomAccessories.push(roomAccessory);
 
-				if (robot.device.maps)
-				{
-					robot.device.maps.forEach((map) =>
-					{
-						if (map.boundaries)
-						{
-							map.boundaries.forEach((boundary) =>
-							{
-								if (boundary.type === "polygon")
-								{
-									let roomAccessory = new NeatoVacuumRobotAccessory(this, robot, boundary);
-									accessories.push(roomAccessory);
-
-									robot.roomAccessories.push(roomAccessory);
-								}
-							})
-						}
-					})
-				}
+				// if (robot.device.maps)
+				// {
+				// 	robot.device.maps.forEach((map) =>
+				// 	{
+				// 		if (map.boundaries)
+				// 		{
+				// 			map.boundaries.forEach((boundary) =>
+				// 			{
+				// 				if (boundary.type === "polygon")
+				// 				{
+				// 					robot.boundary = boundary;
+				// 					let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+				// 					accessories.push(roomAccessory);
+				//
+				// 					robot.roomAccessories.push(roomAccessory);
+				// 				}
+				// 			})
+				// 		}
+				// 	})
+				// }
 			});
 			callback(accessories);
 		});
