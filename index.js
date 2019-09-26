@@ -71,31 +71,31 @@ NeatoVacuumRobotPlatform.prototype = {
 				robot.roomAccessories = [];
 
 				// For testing purposes only
-				robot.boundary = {name: "Testroom", id: "1"};
-				let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
-				accessories.push(roomAccessory);
-				robot.roomAccessories.push(roomAccessory);
+				// robot.boundary = {name: "Testroom", id: "1"};
+				// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+				// accessories.push(roomAccessory);
+				// robot.roomAccessories.push(roomAccessory);
 
-				// if (robot.device.maps)
-				// {
-				// 	robot.device.maps.forEach((map) =>
-				// 	{
-				// 		if (map.boundaries)
-				// 		{
-				// 			map.boundaries.forEach((boundary) =>
-				// 			{
-				// 				if (boundary.type === "polygon")
-				// 				{
-				// 					robot.boundary = boundary;
-				// 					let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
-				// 					accessories.push(roomAccessory);
-				//
-				// 					robot.roomAccessories.push(roomAccessory);
-				// 				}
-				// 			})
-				// 		}
-				// 	})
-				// }
+				if (robot.device.maps)
+				{
+					robot.device.maps.forEach((map) =>
+					{
+						if (map.boundaries)
+						{
+							map.boundaries.forEach((boundary) =>
+							{
+								if (boundary.type === "polygon")
+								{
+									robot.boundary = boundary;
+									let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+									accessories.push(roomAccessory);
+
+									robot.roomAccessories.push(roomAccessory);
+								}
+							})
+						}
+					})
+				}
 			});
 			callback(accessories);
 		});

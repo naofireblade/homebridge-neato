@@ -590,7 +590,7 @@ NeatoVacuumRobotAccessory.prototype = {
 	{
 		this.platform.updateRobot(this.robot._serial, () =>
 		{
-			debug(this.name + ": Spot repeat is " + (this.robot.spotRepeat ? 'ON' : 'OFF'));
+			debug(this.name + ": Spot repeat is " + (this.robot.spotRepeat ? 'ON'.brightGreen : 'OFF'.red));
 			callback(false, this.robot.spotRepeat);
 		});
 	},
