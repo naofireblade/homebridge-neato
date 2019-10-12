@@ -17,7 +17,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Eco mode
   - Extra care navigation
   - Nogo lines
-- Zone cleaning
+- Zone cleaning* (only D7)
 - Spot cleaning
   - Individual spot size (only D7)
   - Clean twice
@@ -31,6 +31,8 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Model and firmware version
 - Automatic or periodic refresh of robot state
 - Multiple robots
+
+>*You can also send the robot from one room to another. He will return to the base, wait there some seconds and then starts cleaning the other room.
 
 ## Installation
 
@@ -59,9 +61,9 @@ Add the following information to your config file. Change the values for email a
 
 The following config contains advanced optional settings.
 
-The parameter **refresh** is default set to auto and updates the robot state when a cleaning was started via homekit so that you can activate automations based on a successful cleaning. If you want to get robot state updates after starting the cleaning from outside of homekit as well (neato app or schedule), you have to set refresh to a static value in seconds e.g. `120`. You can disable background updates completely by setting this to `0`.
+The parameter **refresh** is default set to `auto` and updates the robot state when a cleaning was started via homekit so that you can activate automations based on a successful cleaning. If you want to get robot state updates after starting the cleaning from outside of homekit as well (neato app or schedule), you have to set refresh to a static value in seconds e.g. `120`. You can disable background updates completely by setting this to `0`.
 
-The parameter **hidden** accepts a list of switches/sensors that can be hidden from homekit (e.g. `dock`, `dockstate`, `eco`, `schedule`, `find`, `spot`).
+The parameter **hidden** accepts a list of switches/sensors that can be hidden from homekit (e.g. `dock`, `dockstate`, `eco`, `nogolines`, `extracare`, `schedule`, `find`, `spot`).
 
 ```json
 "platforms": [
@@ -84,4 +86,4 @@ Many thanks go to
 - [ghulands](https://github.com/ghulands) for finding and fixing a bug when no robot is associated with the neato account
 - [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
 - [Antoine de Maleprade](https://github.com/az0uz) for adding the zone cleaning feature
-- [DJay](https://github.com/DJay-X) for testing tons of new beta versions
+- [DJay](https://github.com/DJay-X) for testing out tons of new beta versions
