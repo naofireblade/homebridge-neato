@@ -271,6 +271,7 @@ NeatoVacuumRobotAccessory.prototype = {
 						this.setGoToDock(true, (error, result) =>
 						{
 							this.nextRoom = this.boundary.id;
+							callback();
 						});
 					}
 					// Start new cleaning of new room
