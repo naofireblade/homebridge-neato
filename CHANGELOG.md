@@ -110,4 +110,7 @@
 * Added logic to be able to change the currently cleaned room
 * Improved number of requests when having multiple rooms
 * Fixed room switches not taking eco and extraCare mode into account
-* Fixed room switches to support pause/resume
+* Fixed room switches not supporting pause/resume
+
+## 0.7.1
+* Fixed robot not shown before setting up a floor plan

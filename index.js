@@ -116,7 +116,7 @@ NeatoVacuumRobotPlatform.prototype = {
 			}
 			else
 			{
-				// Get robots
+				// Get all robots
 				client.getRobots((error, robots) =>
 				{
 					if (error)
@@ -133,11 +133,11 @@ NeatoVacuumRobotPlatform.prototype = {
 					else
 					{
 						debug("Found " + robots.length + " robots");
-						let requestedRobot = 0;
+						let loadedRobots = 0;
 
 						robots.forEach((robot) =>
 						{
-							// Get Maps for each robot
+							// Get all maps for each robot
 							robot.getPersistentMaps((error, result) =>
 							{
 								if (error)
@@ -145,18 +145,20 @@ NeatoVacuumRobotPlatform.prototype = {
 									this.log.error("Error updating persistent maps: " + error + ": " + result);
 									callback();
 								}
+								// Robot has no maps
 								else if (result.length === 0)
 								{
 									robot.maps = [];
-									callback();
+									this.saveRobot(robot, loadedRobots, robots.length, callback);
 								}
+								// Robot has maps
 								else
 								{
 									robot.maps = result;
-									let requestedMap = 0;
+									let loadedMaps = 0;
 									robot.maps.forEach((map) =>
 									{
-										// Get Map Boundary Lines
+										// Save zones in each map
 										robot.getMapBoundaries(map.id, (error, result) =>
 										{
 											if (error)
@@ -167,31 +169,12 @@ NeatoVacuumRobotPlatform.prototype = {
 											{
 												map.boundaries = result.boundaries;
 											}
-											requestedMap++;
+											loadedMaps++;
 
-											// Robot is completely requested if all maps are requested
-											if (requestedMap === robot.maps.length)
+											// Robot is completely requested if zones for all maps are loaded
+											if (loadedMaps === robot.maps.length)
 											{
-												// Get additional information
-												robot.getState((error, result) =>
-												{
-													if (error)
-													{
-														this.log.error("Error getting robot meta information: " + error + ": " + result);
-														callback();
-													}
-													else
-													{
-														this.robots.push({device: robot, meta: result.meta, availableServices: result.availableServices});
-														requestedRobot++;
-
-														// Initial request is complete if all robots are requested.
-														if (requestedRobot === robots.length)
-														{
-															callback();
-														}
-													}
-												});
+												this.saveRobot(robot, loadedRobots, robots.length, callback);
 											}
 										})
 									});
@@ -200,6 +183,31 @@ NeatoVacuumRobotPlatform.prototype = {
 						});
 					}
 				});
+			}
+		});
+	},
+
+	saveRobot: function (robot, loadedRobots, size, callback)
+	{
+		// Get additional information for the robot
+		robot.getState((error, result) =>
+		{
+			if (error)
+			{
+				this.log.error("Error getting robot meta information: " + error + ": " + result);
+				callback();
+			}
+			else
+			{
+				// Store the robot with his information, maps and zones
+				this.robots.push({device: robot, meta: result.meta, availableServices: result.availableServices});
+				loadedRobots++;
+
+				// Initial request is complete if all robots are loaded.
+				if (loadedRobots === size)
+				{
+					callback();
+				}
 			}
 		});
 	},
