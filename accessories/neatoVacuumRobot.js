@@ -252,7 +252,7 @@ NeatoVacuumRobotAccessory.prototype = {
 					else if (this.robot.canStart)
 					{
 						debug(this.name + ": ## Start cleaning");
-						this.clean(callback, this.boundary);
+						this.clean(callback);
 					}
 					// Cannot start
 					else
@@ -278,7 +278,7 @@ NeatoVacuumRobotAccessory.prototype = {
 					else
 					{
 						debug(this.name + ": ## Start cleaning of new room");
-						this.clean(callback, this.boundary);
+						this.clean(callback);
 					}
 				}
 			}
