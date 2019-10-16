@@ -17,6 +17,9 @@ module.exports = function (_Service, _Characteristic)
 {
 	Service = _Service;
 	Characteristic = _Characteristic;
+	SpotWidthCharacteristic = require('../characteristics/spotWidth')(Characteristic, CustomUUID);
+	SpotHeightCharacteristic = require('../characteristics/spotHeight')(Characteristic, CustomUUID);
+	SpotRepeatCharacteristic = require('../characteristics/spotRepeat')(Characteristic, CustomUUID);
 
 	return NeatoVacuumRobotAccessory;
 };
@@ -32,7 +35,7 @@ function NeatoVacuumRobotAccessory(platform, robotObject)
 	this.robotObject = robotObject;
 	this.robot = robotObject.device;
 	this.meta = robotObject.meta;
-	this.availableServices = robotObject.availableServices;
+	this.spotPlusFeatures = ((typeof robotObject.availableServices.spotCleaning !== 'undefined') && robotObject.availableServices.spotCleaning.includes("basic"));
 	this.boundary = (typeof robotObject.boundary === 'undefined') ? null : robotObject.boundary;
 
 	if (this.boundary == null)
@@ -74,23 +77,12 @@ function NeatoVacuumRobotAccessory(platform, robotObject)
 		this.scheduleService = new Service.Switch(this.name + " Schedule", "schedule");
 		this.findMeService = new Service.Switch(this.name + " Find Me", "findMe");
 
-		SpotWidthCharacteristic = require('../characteristics/spotWidth')(Characteristic, CustomUUID);
-		SpotHeightCharacteristic = require('../characteristics/spotHeight')(Characteristic, CustomUUID);
-		SpotRepeatCharacteristic = require('../characteristics/spotRepeat')(Characteristic, CustomUUID);
-
-		// Spot cleaning with advanced options
-		if ((typeof this.availableServices.spotCleaning !== 'undefined') && this.availableServices.spotCleaning.includes("basic"))
+		this.spotCleanService = new Service.Switch(this.name + " Clean Spot", "cleanSpot");
+		this.spotCleanService.addCharacteristic(SpotRepeatCharacteristic);
+		if (this.spotPlusFeatures)
 		{
-			this.spotCleanAdvancedService = new Service.Switch(this.name + " Clean Spot", "cleanSpot");
-			this.spotCleanAdvancedService.addCharacteristic(SpotRepeatCharacteristic);
-			this.spotCleanAdvancedService.addCharacteristic(SpotWidthCharacteristic);
-			this.spotCleanAdvancedService.addCharacteristic(SpotHeightCharacteristic);
-		}
-		// Spot cleaning without advanced options
-		else
-		{
-			this.spotCleanSimpleService = new Service.Switch(this.name + " Clean Spot", "cleanSpot");
-			this.spotCleanSimpleService.addCharacteristic(SpotRepeatCharacteristic);
+			this.spotCleanService.addCharacteristic(SpotWidthCharacteristic);
+			this.spotCleanService.addCharacteristic(SpotHeightCharacteristic);
 		}
 	}
 	else
@@ -166,29 +158,22 @@ NeatoVacuumRobotAccessory.prototype = {
 			this.findMeService.getCharacteristic(Characteristic.On).on('set', this.setFindMe.bind(this));
 			this.findMeService.getCharacteristic(Characteristic.On).on('get', this.getFindMe.bind(this));
 
-			if (typeof this.spotCleanAdvancedService !== 'undefined')
-			{
-				this.spotCleanAdvancedService.getCharacteristic(Characteristic.On).on('set', this.setSpotClean.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(Characteristic.On).on('get', this.getSpotClean.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(SpotRepeatCharacteristic).on('set', this.setSpotRepeat.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(SpotRepeatCharacteristic).on('get', this.getSpotRepeat.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(SpotWidthCharacteristic).on('set', this.setSpotWidth.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(SpotWidthCharacteristic).on('get', this.getSpotWidth.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(SpotHeightCharacteristic).on('set', this.setSpotHeight.bind(this));
-				this.spotCleanAdvancedService.getCharacteristic(SpotHeightCharacteristic).on('get', this.getSpotHeight.bind(this));
+			this.spotCleanService.getCharacteristic(Characteristic.On).on('set', this.setSpotClean.bind(this));
+			this.spotCleanService.getCharacteristic(Characteristic.On).on('get', this.getSpotClean.bind(this));
+			this.spotCleanService.getCharacteristic(SpotRepeatCharacteristic).on('set', this.setSpotRepeat.bind(this));
+			this.spotCleanService.getCharacteristic(SpotRepeatCharacteristic).on('get', this.getSpotRepeat.bind(this));
 
-				if (this.hiddenServices.indexOf('spot') === -1)
-					this.services.push(this.spotCleanAdvancedService);
+			if (this.spotPlusFeatures)
+			{
+				this.spotCleanService.getCharacteristic(SpotWidthCharacteristic).on('set', this.setSpotWidth.bind(this));
+				this.spotCleanService.getCharacteristic(SpotWidthCharacteristic).on('get', this.getSpotWidth.bind(this));
+				this.spotCleanService.getCharacteristic(SpotHeightCharacteristic).on('set', this.setSpotHeight.bind(this));
+				this.spotCleanService.getCharacteristic(SpotHeightCharacteristic).on('get', this.getSpotHeight.bind(this));
 			}
-			else
-			{
-				this.spotCleanSimpleService.getCharacteristic(Characteristic.On).on('set', this.setSpotClean.bind(this));
-				this.spotCleanSimpleService.getCharacteristic(Characteristic.On).on('get', this.getSpotClean.bind(this));
-				this.spotCleanSimpleService.getCharacteristic(SpotRepeatCharacteristic).on('set', this.setSpotRepeat.bind(this));
-				this.spotCleanSimpleService.getCharacteristic(SpotRepeatCharacteristic).on('get', this.getSpotRepeat.bind(this));
 
-				if (this.hiddenServices.indexOf('spot') === -1)
-					this.services.push(this.spotCleanSimpleService);
+			if (this.hiddenServices.indexOf('spot') === -1)
+			{
+				this.services.push(this.spotCleanService);
 			}
 
 			// Add optional services
@@ -507,12 +492,10 @@ NeatoVacuumRobotAccessory.prototype = {
 
 	setSpotClean: function (on, callback)
 	{
-		let spotCleanService = (typeof this.spotCleanAdvancedService !== 'undefined') ? this.spotCleanAdvancedService : this.spotCleanSimpleService;
-
 		let spot = {
-			width:  spotCleanService.getCharacteristic(SpotWidthCharacteristic).value,
-			height: spotCleanService.getCharacteristic(SpotHeightCharacteristic).value,
-			repeat: spotCleanService.getCharacteristic(SpotRepeatCharacteristic).value
+			width: this.spotPlusFeatures ? this.spotCleanService.getCharacteristic(SpotWidthCharacteristic).value : null,
+			height: this.spotPlusFeatures ? this.spotCleanService.getCharacteristic(SpotHeightCharacteristic).value : null,
+			repeat: this.spotCleanService.getCharacteristic(SpotRepeatCharacteristic).value
 		};
 
 		this.platform.updateRobot(this.robot._serial, (error, result) =>
@@ -658,15 +641,12 @@ NeatoVacuumRobotAccessory.prototype = {
 			this.noGoLinesService.setCharacteristic(Characteristic.On, this.robot.noGoLines);
 			this.extraCareService.setCharacteristic(Characteristic.On, this.robot.navigationMode == 2 ? true : false);
 
-			if (typeof this.spotCleanAdvancedService !== 'undefined')
+			this.spotCleanService.setCharacteristic(SpotRepeatCharacteristic, this.robot.spotRepeat);
+
+			if (this.spotPlusFeatures)
 			{
-				this.spotCleanAdvancedService.setCharacteristic(SpotWidthCharacteristic, this.robot.spotWidth);
-				this.spotCleanAdvancedService.setCharacteristic(SpotHeightCharacteristic, this.robot.spotHeight);
-				this.spotCleanAdvancedService.setCharacteristic(SpotRepeatCharacteristic, this.robot.spotRepeat);
-			}
-			else
-			{
-				this.spotCleanSimpleService.setCharacteristic(SpotRepeatCharacteristic, this.robot.spotRepeat);
+					this.spotCleanService.setCharacteristic(SpotWidthCharacteristic, this.robot.spotWidth);
+					this.spotCleanService.setCharacteristic(SpotHeightCharacteristic, this.robot.spotHeight);
 			}
 		}
 

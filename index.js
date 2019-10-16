@@ -4,12 +4,14 @@ let inherits = require('util').inherits,
 	botvac = require('node-botvac'),
 
 	Service,
-	Characteristic;
+	Characteristic,
+	NeatoVacuumRobotAccessory;
 
 module.exports = function (homebridge)
 {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
+	NeatoVacuumRobotAccessory = require('./accessories/neatoVacuumRobot')(Service, Characteristic);
 	homebridge.registerPlatform("homebridge-neato", "NeatoVacuumRobot", NeatoVacuumRobotPlatform);
 };
 
@@ -54,50 +56,70 @@ NeatoVacuumRobotPlatform.prototype = {
 		debug("Get robots");
 		let accessories = [];
 		this.boundaryNames = [];
+
 		this.getRobots(() =>
 		{
-			this.robots.forEach((robot, i) =>
-			{
-				this.log("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial.substring(0,9) + "XXXXXXXXXXXX\"");
+			// // MOCK MULTIPLE ROBOTS START
+			// let client = new botvac.Client();
+			// client.authorize(this.email, this.password, false, (error) =>
+			// {
+			// 	client.getRobots((error, robs) =>
+			// 	{
+			// 		let testRobot = robs[0];
+			// 		testRobot.getState((error, result) =>
+			// 		{
+			// 			testRobot.name = "Testrobot";
+			// 			this.robots.push({device: testRobot, meta: result.meta, availableServices: result.availableServices});
+			// 			// MOCK MULTIPLE ROBOTS END
 
-				// Start Update Intervall
-				this.updateRobotTimer(robot.device._serial);
-
-				let NeatoVacuumRobotAccessory = require('./accessories/neatoVacuumRobot')(Service, Characteristic);
-				let mainAccessory = new NeatoVacuumRobotAccessory(this, robot);
-				accessories.push(mainAccessory);
-
-				robot.mainAccessory = mainAccessory;
-				robot.roomAccessories = [];
-
-				// For testing purposes only
-				// robot.boundary = {name: "Testroom", id: "1"};
-				// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
-				// accessories.push(roomAccessory);
-				// robot.roomAccessories.push(roomAccessory);
-
-				if (robot.device.maps)
-				{
-					robot.device.maps.forEach((map) =>
-					{
-						if (map.boundaries)
+						this.robots.forEach((robot, i) =>
 						{
-							map.boundaries.forEach((boundary) =>
-							{
-								if (boundary.type === "polygon")
-								{
-									robot.boundary = boundary;
-									let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
-									accessories.push(roomAccessory);
+							this.log("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial.substring(0, 9) + "XXXXXXXXXXXX\"");
 
-									robot.roomAccessories.push(roomAccessory);
-								}
-							})
-						}
-					})
-				}
-			});
-			callback(accessories);
+							let mainAccessory = new NeatoVacuumRobotAccessory(this, robot);
+							accessories.push(mainAccessory);
+
+							robot.mainAccessory = mainAccessory;
+							robot.roomAccessories = [];
+
+							// Start Update Intervall
+							this.updateRobotTimer(robot.device._serial);
+
+							// // MOCK ZONE CLEANING START
+							// robot.boundary = {name: "Testroom", id: "1"};
+							// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+							// accessories.push(roomAccessory);
+							// robot.roomAccessories.push(roomAccessory);
+							// // MOCK ZONE CLEANING END
+
+							if (robot.device.maps)
+							{
+								robot.device.maps.forEach((map) =>
+								{
+									if (map.boundaries)
+									{
+										map.boundaries.forEach((boundary) =>
+										{
+											if (boundary.type === "polygon")
+											{
+												robot.boundary = boundary;
+												let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+												accessories.push(roomAccessory);
+
+												robot.roomAccessories.push(roomAccessory);
+											}
+										})
+									}
+								})
+							}
+						});
+						callback(accessories);
+
+			// 			// MOCK MULTIPLE ROBOTS START
+			// 		});
+			// 	});
+			// });
+			// // MOCK MULTIPLE ROBOTS END
 		});
 	},
 
@@ -137,77 +159,74 @@ NeatoVacuumRobotPlatform.prototype = {
 
 						robots.forEach((robot) =>
 						{
-							// Get all maps for each robot
-							robot.getPersistentMaps((error, result) =>
+							// Get additional information for the robot
+							robot.getState((error, state) =>
 							{
 								if (error)
 								{
-									this.log.error("Error updating persistent maps: " + error + ": " + result);
+									this.log.error("Error getting robot meta information: " + error + ": " + state);
 									callback();
 								}
-								// Robot has no maps
-								else if (result.length === 0)
-								{
-									robot.maps = [];
-									this.saveRobot(robot, loadedRobots, robots.length, callback);
-								}
-								// Robot has maps
 								else
 								{
-									robot.maps = result;
-									let loadedMaps = 0;
-									robot.maps.forEach((map) =>
+									// Get all maps for each robot
+									robot.getPersistentMaps((error, maps) =>
 									{
-										// Save zones in each map
-										robot.getMapBoundaries(map.id, (error, result) =>
+										if (error)
 										{
-											if (error)
+											this.log.error("Error updating persistent maps: " + error + ": " + maps);
+											callback();
+										}
+										// Robot has no maps
+										else if (maps.length === 0)
+										{
+											robot.maps = [];
+											this.robots.push({device: robot, meta: state.meta, availableServices: state.availableServices});
+											loadedRobots++;
+											if (loadedRobots === robots.length)
 											{
-												this.log.error("Error getting boundaries: " + error + ": " + result)
+												callback();
 											}
-											else
+										}
+										// Robot has maps
+										else
+										{
+											robot.maps = maps;
+											let loadedMaps = 0;
+											robot.maps.forEach((map) =>
 											{
-												map.boundaries = result.boundaries;
-											}
-											loadedMaps++;
+												// Save zones in each map
+												robot.getMapBoundaries(map.id, (error, result) =>
+												{
+													if (error)
+													{
+														this.log.error("Error getting boundaries: " + error + ": " + result)
+													}
+													else
+													{
+														map.boundaries = result.boundaries;
+													}
+													loadedMaps++;
 
-											// Robot is completely requested if zones for all maps are loaded
-											if (loadedMaps === robot.maps.length)
-											{
-												this.saveRobot(robot, loadedRobots, robots.length, callback);
-											}
-										})
+													// Robot is completely requested if zones for all maps are loaded
+													if (loadedMaps === robot.maps.length)
+													{
+														this.robots.push({device: robot, meta: state.meta, availableServices: state.availableServices});
+														loadedRobots++;
+														if (loadedRobots === robots.length)
+														{
+															callback();
+														}
+													}
+												})
+											});
+										}
 									});
 								}
 							});
 						});
 					}
 				});
-			}
-		});
-	},
-
-	saveRobot: function (robot, loadedRobots, size, callback)
-	{
-		// Get additional information for the robot
-		robot.getState((error, result) =>
-		{
-			if (error)
-			{
-				this.log.error("Error getting robot meta information: " + error + ": " + result);
-				callback();
-			}
-			else
-			{
-				// Store the robot with his information, maps and zones
-				this.robots.push({device: robot, meta: result.meta, availableServices: result.availableServices});
-				loadedRobots++;
-
-				// Initial request is complete if all robots are loaded.
-				if (loadedRobots === size)
-				{
-					callback();
-				}
 			}
 		});
 	},
