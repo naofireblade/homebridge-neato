@@ -17,9 +17,9 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Eco mode
   - Extra care navigation
   - Nogo lines
-- Zone cleaning* (only D7)
+- Zone cleaning <sup>[1](#d7)</sup><sup>,</sup><sup>[2](#change-room)</sup>
 - Spot cleaning
-  - Individual spot size (only D7)
+  - Individual spot size <sup>[1](#d7)</sup>
   - Clean twice
 - Return to dock
 - Find the robot
@@ -32,7 +32,9 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 - Automatic or periodic refresh of robot state
 - Multiple robots
 
->*You can also send the robot from one room to another. He will return to the base, wait there some seconds and then starts cleaning the other room.
+> <b name="d7">1</b> Only available on the Neato D7.  
+
+> <b name="change-room">2</b> You can send the robot from one room to another as well. He will return to the base, wait there some seconds and then starts cleaning the next room.
 
 ## Installation
 
@@ -59,11 +61,16 @@ Add the following information to your config file. Change the values for email a
 
 ### Advanced
 
-The following config contains advanced optional settings.
+Below are explanations for advanced parameters to adjust the plugin to your needs. All parameters are *optional*.
 
-The parameter **refresh** is default set to `auto` and updates the robot state when a cleaning was started via homekit so that you can activate automations based on a successful cleaning. If you want to get robot state updates after starting the cleaning from outside of homekit as well (neato app or schedule), you have to set refresh to a static value in seconds e.g. `120`. You can disable background updates completely by setting this to `0`.
+**refresh**  
+Timer for periodic refresh of robot state. The default is `auto`. The options are:  
+`auto` Updates the robot state when a cleaning was started via homekit so that you can activate automations based on a successful cleaning.  
+`120` Or any other time in seconds (minimum `60`) is required if you want to receive robot state updates after starting the cleaning from outside of homekit (e.g. neato app or schedule).  
+`0` Disables background updates completely.
 
-The parameter **hidden** accepts a list of switches/sensors that can be hidden from homekit (e.g. `dock`, `dockstate`, `eco`, `nogolines`, `extracare`, `schedule`, `find`, `spot`).
+**hidden**  
+List of plugin features that you don't want to use in homekit (e.g. `dock`, `dockstate`, `eco`, `nogolines`, `extracare`, `schedule`, `find`, `spot`).
 
 ```json
 "platforms": [
