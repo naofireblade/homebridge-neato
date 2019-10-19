@@ -114,3 +114,6 @@
 
 ## 0.7.1
 * Fixed robot not shown before setting up a floor plan
+
+## 0.7.2
+* Fixed homebridge crash with multiple robots per account
