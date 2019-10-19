@@ -17,7 +17,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Eco mode
   - Extra care navigation
   - Nogo lines
-- Zone cleaning <sup>[1](#d7)</sup><sup>,</sup><sup>[2](#change-room)</sup>
+- Zone cleaning <sup>[1](#d7)</sup><sup>, </sup><sup>[2](#change-room)</sup>
 - Spot cleaning
   - Individual spot size <sup>[1](#d7)</sup>
   - Clean twice
