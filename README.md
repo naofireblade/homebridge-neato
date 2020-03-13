@@ -19,7 +19,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Nogo lines
 - Zone cleaning <sup>[1](#d7)</sup><sup>, </sup><sup>[2](#change-room)</sup>
 - Spot cleaning
-  - Individual spot size <sup>[1](#d7)</sup>, <sup>[3](#eve)</sup>
+  - Individual spot size <sup>[1](#d7)</sup><sup>, </sup><sup>[3](#eve)</sup>
   - Clean twice <sup>[3](#eve)</sup>
 - Return to dock
 - Find the robot
