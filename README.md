@@ -19,8 +19,8 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Nogo lines
 - Zone cleaning <sup>[1](#d7)</sup><sup>, </sup><sup>[2](#change-room)</sup>
 - Spot cleaning
-  - Individual spot size <sup>[1](#d7)</sup>
-  - Clean twice
+  - Individual spot size <sup>[1](#d7)</sup>, <sup>[3](#eve)</sup>
+  - Clean twice <sup>[3](#eve)</sup>
 - Return to dock
 - Find the robot
 - Schedule (de)activation
@@ -35,6 +35,10 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
 > <b name="d7">1</b> Only available on the Neato D7.  
 
 > <b name="change-room">2</b> You can send the robot from one room to another as well. He will return to the base, wait there some seconds and then starts cleaning the next room.
+
+> <b name="eve">3</b> You need a third party app like eve to access these features.
+
+
 
 ## Installation
 
