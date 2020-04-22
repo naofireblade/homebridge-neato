@@ -96,7 +96,7 @@ function NeatoVacuumRobotAccessory(platform, robotObject)
 		this.cleanService = new Service.Switch(serviceName, "cleanBoundary:" + this.boundary.id);
 	}
 
-	this.log("Added cleaning device named: " + this.name);
+	this.log.info("Added cleaning device named: " + this.name);
 }
 
 NeatoVacuumRobotAccessory.prototype = {
@@ -110,8 +110,8 @@ NeatoVacuumRobotAccessory.prototype = {
 			}
 			else
 			{
-				this.log("### Robot information ###");
-				this.log(result);
+				this.log.info("### Robot information ###");
+				this.log.info(result);
 			}
 			callback();
 		});

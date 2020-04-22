@@ -1,6 +1,5 @@
 "use strict";
-let inherits = require('util').inherits,
-	debug = require('debug')('homebridge-neato'),
+let debug = require('debug')('homebridge-neato'),
 	botvac = require('node-botvac'),
 
 	Service,
@@ -47,85 +46,69 @@ function NeatoVacuumRobotPlatform(log, config)
 	{
 		this.refresh = 'auto';
 	}
-	this.log("Refresh is set to: " + this.refresh + (this.refresh !== 'auto' ? ' seconds' : ''));
+	this.log.info("Refresh is set to: " + this.refresh + (this.refresh !== 'auto' ? ' seconds' : ''));
 }
 
 NeatoVacuumRobotPlatform.prototype = {
 	accessories: function (callback)
 	{
-		debug("Get robots");
+		debug("Creating accessories");
 		let accessories = [];
 		this.boundaryNames = [];
 
-		this.getRobots(() =>
+		this.getRobots((error) =>
 		{
-			// // MOCK MULTIPLE ROBOTS START
-			// let client = new botvac.Client();
-			// client.authorize(this.email, this.password, false, (error) =>
-			// {
-			// 	client.getRobots((error, robs) =>
-			// 	{
-			// 		let testRobot = robs[0];
-			// 		testRobot.getState((error, result) =>
-			// 		{
-			// 			testRobot.name = "Testrobot";
-			// 			this.robots.push({device: testRobot, meta: result.meta, availableServices: result.availableServices});
-			// 			// MOCK MULTIPLE ROBOTS END
+			if (error)
+			{
+				throw new Error("Error init robots");
+			}
+			else
+			{
+				for (let i = 0; i < this.robots.length; i++)
+				{
+					let robot = this.robots[i];
+					this.log.info("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial.substring(0, 9) + "XXXXXXXXXXXX\"");
 
-						this.robots.forEach((robot, i) =>
+					let mainAccessory = new NeatoVacuumRobotAccessory(this, robot);
+					accessories.push(mainAccessory);
+
+					robot.mainAccessory = mainAccessory;
+					robot.roomAccessories = [];
+
+					// Start Update Intervall
+					this.updateRobotTimer(robot.device._serial);
+
+					if (robot.device.maps)
+					{
+						for (let j = 0; j < robot.device.maps.length; j++)
 						{
-							this.log("Found robot #" + (i + 1) + " named \"" + robot.device.name + "\" with serial \"" + robot.device._serial.substring(0, 9) + "XXXXXXXXXXXX\"");
-
-							let mainAccessory = new NeatoVacuumRobotAccessory(this, robot);
-							accessories.push(mainAccessory);
-
-							robot.mainAccessory = mainAccessory;
-							robot.roomAccessories = [];
-
-							// Start Update Intervall
-							this.updateRobotTimer(robot.device._serial);
-
-							// // MOCK ZONE CLEANING START
-							// robot.boundary = {name: "Testroom", id: "1"};
-							// let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
-							// accessories.push(roomAccessory);
-							// robot.roomAccessories.push(roomAccessory);
-							// // MOCK ZONE CLEANING END
-
-							if (robot.device.maps)
+							let map = robot.device.maps[j];
+							if (map.boundaries)
 							{
-								robot.device.maps.forEach((map) =>
+								for (let k = 0; k < map.boundaries.length; k++)
 								{
-									if (map.boundaries)
+									let boundary = map.boundaries[k];
+									if (boundary.type === "polygon")
 									{
-										map.boundaries.forEach((boundary) =>
-										{
-											if (boundary.type === "polygon")
-											{
-												robot.boundary = boundary;
-												let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
-												accessories.push(roomAccessory);
+										robot.boundary = boundary;
+										let roomAccessory = new NeatoVacuumRobotAccessory(this, robot);
+										accessories.push(roomAccessory);
 
-												robot.roomAccessories.push(roomAccessory);
-											}
-										})
+										robot.roomAccessories.push(roomAccessory);
 									}
-								})
+								}
 							}
-						});
-						callback(accessories);
-
-			// 			// MOCK MULTIPLE ROBOTS START
-			// 		});
-			// 	});
-			// });
-			// // MOCK MULTIPLE ROBOTS END
+						}
+					}
+				}
+				callback(accessories);
+			}
 		});
 	},
 
 	getRobots: function (callback)
 	{
-		debug("Loading your robots");
+		debug("Getting robots");
 		let client = new botvac.Client();
 
 		// Login
@@ -133,8 +116,8 @@ NeatoVacuumRobotPlatform.prototype = {
 		{
 			if (error)
 			{
-				this.log.error("Can't log on to neato cloud. Please check your internet connection and your credentials. Try again later if the neato servers have issues: " + error);
-				callback();
+				this.log.error("Can't log in to neato cloud. Please check your internet connection and your credentials. Try again later if the neato servers have issues.");
+				callback(true);
 			}
 			else
 			{
@@ -154,53 +137,53 @@ NeatoVacuumRobotPlatform.prototype = {
 					}
 					else
 					{
-						debug("Found " + robots.length + " robots");
+						debug("Found %s robots in account", robots.length);
 						let loadedRobots = 0;
 
 						robots.forEach((robot) =>
 						{
-							// Get additional information for the robot
+							debug("Processing robot %s", robot.name);
+							debug("Getting meta information for robot %s", robot.name);
 							robot.getState((error, state) =>
 							{
 								if (error)
 								{
-									this.log.error("Error getting robot meta information: " + error + ": " + state);
-									callback();
+									this.log.warn("Cannot get meta information for robot %s. Maybe a non smart robot. Message: %s", robot.name, error);
+									this.checkDone(loadedRobots, robots.length, callback);
 								}
 								else
 								{
-									// Get all maps for each robot
+									debug("Getting zone cleaning maps for robot %s", robot.name);
 									robot.getPersistentMaps((error, maps) =>
 									{
 										if (error)
 										{
-											this.log.error("Error updating persistent maps: " + error + ": " + maps);
-											callback();
+											this.log.error("Error getting zone cleaning maps: " + error + ": " + maps);
+											this.checkDone(loadedRobots, robots.length, callback);
 										}
 										// Robot has no maps
 										else if (maps.length === 0)
 										{
+											debug("Robot %s has no zone cleaning maps", robot.name);
 											robot.maps = [];
 											this.robots.push({device: robot, meta: state.meta, availableServices: state.availableServices});
-											loadedRobots++;
-											if (loadedRobots === robots.length)
-											{
-												callback();
-											}
+											this.checkDone(loadedRobots, robots.length, callback);
 										}
 										// Robot has maps
 										else
 										{
+											debug("Robot %s has %s zone cleaning maps", robot.name, maps.length);
 											robot.maps = maps;
 											let loadedMaps = 0;
 											robot.maps.forEach((map) =>
 											{
-												// Save zones in each map
+												debug("Processing zone cleaning map %s of robot %s", map.id, robot.name);
 												robot.getMapBoundaries(map.id, (error, result) =>
 												{
+
 													if (error)
 													{
-														this.log.error("Error getting boundaries: " + error + ": " + result)
+														this.log.error("Error getting boundaries for zone cleaning map %s of robot %s: %s", map.id, robot.name, error)
 													}
 													else
 													{
@@ -212,11 +195,7 @@ NeatoVacuumRobotPlatform.prototype = {
 													if (loadedMaps === robot.maps.length)
 													{
 														this.robots.push({device: robot, meta: state.meta, availableServices: state.availableServices});
-														loadedRobots++;
-														if (loadedRobots === robots.length)
-														{
-															callback();
-														}
+														this.checkDone(loadedRobots, robots.length, callback);
 													}
 												})
 											});
@@ -229,6 +208,20 @@ NeatoVacuumRobotPlatform.prototype = {
 				});
 			}
 		});
+	},
+
+	checkDone: function (loadedRobots, allrobots, callback)
+	{
+		loadedRobots++;
+		if (loadedRobots === allrobots)
+		{
+			debug("Async robot requests: DONE");
+			callback();
+		}
+		else
+		{
+			debug("Async robot requests: PROCESSING (finished %s of %s)", loadedRobots, allrobots);
+		}
 	},
 
 	updateRobot: function (serial, callback)

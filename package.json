@@ -39,5 +39,27 @@
     "debug": "^4.1.1",
     "node-botvac": ">=0.4.0",
     "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.9.0",
+    "@types/jest": "^24.0.11",
+    "@types/node": "^13.1.0",
+    "@types/sinon": "^7.0.0",
+    "coveralls": "^3.0.2",
+    "hap-nodejs": "^0.5.0",
+    "husky": "^4.0.0",
+    "jest": "^25.2.4",
+    "lint-staged": "^10.0.1",
+    "nodemon": "^2.0.1",
+    "prettier": "^1.15.3",
+    "prettier-check": "^2.0.0",
+    "sinon": "^9.0.0",
+    "ts-jest": "^25.0.0",
+    "tslint": "^6.0.0",
+    "tslint-config-prettier": "^1.17.0",
+    "typescript": "^3.2.2"
+  },
+  "scripts": {
+    "test": "jest"
   }
 }
