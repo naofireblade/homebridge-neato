@@ -121,34 +121,35 @@ NeatoVacuumRobotPlatform.prototype = {
 			}
 			else
 			{
+				this.log.debug("Successfully logged in to your neato account.");
 				// Get all robots
 				client.getRobots((error, robots) =>
 				{
 					if (error)
 					{
-						this.log.error("Successful login but can't connect to your neato robot: " + error);
+						this.log.error("Successful login but can't get your robots. Message: %s", error);
 						callback();
 					}
 					else if (robots.length === 0)
 					{
-						this.log.error("Successful login but no robots associated with your account.");
+						this.log.error("Successful login but found no robots in your account. Message: %s", error);
 						this.robots = [];
 						callback();
 					}
 					else
 					{
-						debug("Found %s robots in account", robots.length);
+						this.log.debug("Found %s robots in account", robots.length);
 						let loadedRobots = 0;
 
 						robots.forEach((robot) =>
 						{
 							debug("Processing robot %s", robot.name);
-							debug("Getting meta information for robot %s", robot.name);
+							debug("Getting state information for robot %s", robot.name);
 							robot.getState((error, state) =>
 							{
 								if (error)
 								{
-									this.log.warn("Cannot get meta information for robot %s. Maybe a non smart robot. Message: %s", robot.name, error);
+									this.log.warn("Cannot get state information for robot %s. Maybe a non smart robot. Message: %s", robot.name, error);
 									this.checkDone(loadedRobots, robots.length, callback);
 								}
 								else

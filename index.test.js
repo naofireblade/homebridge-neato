@@ -1,7 +1,8 @@
 const
 	index = require('./index'),
 	hap = require('hap-nodejs'),
-	sinon = require('sinon');
+	sinon = require('sinon'),
+	util = require('util');
 
 const botvac = require("node-botvac");
 // const client = require("node-botvac/lib/client");
@@ -42,26 +43,35 @@ describe("homebridge-neato", () =>
 		homebridge = {
 			hap,
 			log: {
+				debugs: [],
+				infos: [],
+				warns: [],
+				errors: [],
 				debug(...message)
 				{
 					[].shift.apply(arguments);
+					this.debugs.push(util.format("DEBUG: " + message[0], ...arguments));
 					console.log("DEBUG: " + message[0], ...arguments);
 				},
 				info(...message)
 				{
 					[].shift.apply(arguments);
+					this.infos.push(util.format("INFO: " + message[0], ...arguments));
 					console.log("INFO: " + message[0], ...arguments);
 				},
 				warn(...message)
 				{
 					[].shift.apply(arguments);
+					this.warns.push(util.format("WARN: " + message[0], ...arguments));
 					console.log("WARN: " + message[0], ...arguments);
 				},
 				error(...message)
 				{
 					[].shift.apply(arguments);
+					this.errors.push(util.format("ERROR: " + message[0], ...arguments));
 					console.log("ERROR: " + message[0], ...arguments);
 				}
+
 			},
 			registerPlatform(pluginName, accessoryName, constructor)
 			{
@@ -110,21 +120,24 @@ describe("homebridge-neato", () =>
 		sinon.restore();
 	});
 
-	it("should register a platform", async () =>
+	describe("Platform", () =>
 	{
-		// Expect method registerPlatform to be called
-		const mock = sinon.mock(homebridge);
-		mock.expects("registerPlatform").once();
+		it("should be registered", async () =>
+		{
+			// Expect method registerPlatform to be called
+			const mock = sinon.mock(homebridge);
+			mock.expects("registerPlatform").once();
 
-		// Import index module and call default exports function
-		const index = await import("./index");
-		index.default(homebridge);
+			// Import index module and call default exports function
+			const index = await import("./index");
+			index.default(homebridge);
 
-		// Verify expectations
-		mock.verify();
+			// Verify expectations
+			mock.verify();
+		});
 	});
 
-	describe("authorization", () =>
+	describe("Authorization", () =>
 	{
 		beforeEach(async () =>
 		{
@@ -138,23 +151,22 @@ describe("homebridge-neato", () =>
 			// Arrange
 			authorizationError = "Wrong credentials";
 			let clientMock = sinon.mock(client);
-			let error = undefined;
 
 			// Act
+			let error = undefined;
 			try
 			{
-				// Call method to get accessories
-				await platform.accessories(accessoriesCallback);
+				await platform.accessories(accessoriesCallback); // Get accessories
 			} catch (e)
 			{
 				error = e;
 			}
 
 			// Assert
-			// Error should be defined
-			expect(error).toBeDefined();
-			// Method getRobots should not be called
-			clientMock.expects("getRobots").never();
+			expect(error).toBeDefined(); // Error should be trown and plugin stopped
+			expect(homebridge.log.errors.length).toBe(1); // Error message should be logged
+			expect(homebridge.log.errors[0].includes("Please check your internet connection and your credentials")).toBeTruthy();
+			clientMock.expects("getRobots").never(); // Method getRobots should not be called
 		});
 
 		it("should succeed with correct credentials", async () =>
@@ -163,39 +175,69 @@ describe("homebridge-neato", () =>
 			let clientMock = sinon.mock(client);
 
 			// Act
-			// Call method to get accessories
-			await platform.accessories(accessoriesCallback);
+			let error = undefined;
+			try
+			{
+				await platform.accessories(accessoriesCallback); // Get accessories
+			} catch (e)
+			{
+				error = e;
+			}
 
 			// Assert
-			// Method getRobots should be called
-			clientMock.expects("getRobots").once();
+			expect(error).toBeUndefined(); // Error should not be trown
+			expect(homebridge.log.debugs.length).toBe(1); // Login debug message should be logged
+			expect(homebridge.log.debugs[0].includes("Successfully logged in to your neato account.")).toBeTruthy();
+			clientMock.expects("getRobots").once(); // Method getRobots should be called
 		});
 	});
 
-	describe("blub", () =>
+	describe("Get robots", () =>
 	{
 		beforeEach(async () =>
 		{
-			robots = [robot];
-
 			// Import index module and call default exports function
 			const index = await import("./index");
 			index.default(homebridge)
 		});
 
-		// Perform test that waits for method done() to be called
-		it("should fetch a robot", async () =>
+		it("should fail if the api returns an error", async () =>
 		{
-			// Arrange
+		});
 
-			// Act
-			// Call method to get accessories
-			await platform.accessories(accessoriesCallback);
+		it("should fail if the user has no robots", async () =>
+		{
+		});
 
-			// Assert
-			// Expect method getRobots to be called in mock of client
-			const mock = sinon.mock(client);
-			mock.expects("getRobots").once();
+		it("should succeed if the user has a robot", async () =>
+		{
+		});
+
+		it("should succeed if the user has multiple robots", async () =>
+		{
+		});
+	});
+
+	describe("Get robot", () =>
+	{
+		describe("Get state information", () =>
+		{
+			it("should be skipped if the robot is offline", async () =>
+			{
+			});
+
+			it("should be skipped if the robot is not smart", async () =>
+			{
+			});
+
+			it("should succeed otherwise", async () =>
+			{
+			});
+		});
+
+		describe("Get zone cleaning maps", () =>
+		{
+
 		});
 	});
 });
