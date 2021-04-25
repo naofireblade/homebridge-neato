@@ -117,3 +117,6 @@
 
 ## 0.7.2
 * Fixed homebridge crash with multiple robots per account
+
+## 0.7.3
+* Fixed warnings since homebridge 1.3.0

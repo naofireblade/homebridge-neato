@@ -239,7 +239,6 @@ NeatoVacuumRobotAccessory.prototype = {
 					// Start cleaning
 					else if (this.robot.canStart)
 					{
-						debug(this.name + ": ## Start cleaning");
 						this.clean(callback);
 					}
 					// Cannot start
