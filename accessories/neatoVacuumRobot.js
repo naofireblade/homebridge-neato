@@ -487,7 +487,7 @@ NeatoVacuumRobotAccessory.prototype = {
 
 	getSpotClean: function (callback)
 	{
-		callback();
+		callback(false, this.spotCleanService.getCharacteristic(Characteristic.On).value);
 	},
 
 	setSpotClean: function (on, callback)
@@ -645,8 +645,13 @@ NeatoVacuumRobotAccessory.prototype = {
 
 			if (this.spotPlusFeatures)
 			{
-					this.spotCleanService.setCharacteristic(SpotWidthCharacteristic, this.robot.spotWidth);
-					this.spotCleanService.setCharacteristic(SpotHeightCharacteristic, this.robot.spotHeight);
+				let widthProps = this.spotCleanService.getCharacteristic(SpotWidthCharacteristic).props;
+				let heightProps = this.spotCleanService.getCharacteristic(SpotHeightCharacteristic).props;
+
+				this.spotCleanService.setCharacteristic(SpotWidthCharacteristic,
+					this.robot.spotWidth >= widthProps.minValue && this.robot.spotWidth <= widthProps.maxValue ? this.robot.spotWidth : widthProps.minValue);
+				this.spotCleanService.setCharacteristic(SpotHeightCharacteristic,
+					this.robot.spotHeight >= heightProps.minValue && this.robot.spotHeight <= heightProps.maxValue ? this.robot.spotHeight : heightProps.minValue);
 			}
 		}
 
