@@ -1,6 +1,7 @@
 {
   "name": "homebridge-neato",
-  "version": "0.7.3",
+  "displayName": "Homebridge Neato",
+  "version": "1.0.0-beta.1",
   "description": "A Neato vacuum robot plugin for homebridge.",
   "license": "MIT",
   "keywords": [
@@ -9,8 +10,15 @@
     "botvac"
   ],
   "engines": {
-    "node": ">=0.12.0",
-    "homebridge": ">=0.2.0"
+    "node": ">=10.17.0",
+    "homebridge": ">=1.3.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src/**.ts --max-warnings=0",
+    "watch": "npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build"
   },
   "author": {
     "name": "Arne Blumentritt",
@@ -34,10 +42,24 @@
     "type": "git",
     "url": "git://github.com/naofireblade/homebridge-neato.git"
   },
+  "bugs": {
+    "url": "https://github.com/naofireblade/homebridge-neato/issues"
+  },
   "dependencies": {
     "colors": "^1.4.0",
     "debug": "^4.1.1",
-    "node-botvac": ">=0.4.0",
+    "node-botvac": "^0.4.0",
     "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.31",
+    "@typescript-eslint/eslint-plugin": "^4.16.1",
+    "@typescript-eslint/parser": "^4.16.1",
+    "eslint": "^7.21.0",
+    "homebridge": "^1.3.1",
+    "nodemon": "^2.0.7",
+    "rimraf": "^3.0.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.2"
   }
 }
