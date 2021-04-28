@@ -218,75 +218,7 @@ NeatoVacuumRobotAccessory.prototype = {
 
 	setClean: function (on, callback)
 	{
-		debug(this.name + ": " + (on ? "Enabled ".brightGreen : "Disabled".red) + " Clean " + (this.boundary ? JSON.stringify(this.boundary) : ''));
-		this.platform.updateRobot(this.robot._serial, (error, result) =>
-		{
-			// Start
-			if (on)
-			{
-				// No room given or same room
-				if (this.boundary == null || this.robot.cleaningBoundaryId === this.boundary.id)
-				{
-					// Resume cleaning
-					if (this.robot.canResume)
-					{
-						debug(this.name + ": ## Resume cleaning");
-						this.robot.resumeCleaning((error) =>
-						{
-							callback(error);
-						});
-					}
-					// Start cleaning
-					else if (this.robot.canStart)
-					{
-						this.clean(callback);
-					}
-					// Cannot start
-					else
-					{
-						debug(this.name + ": Cannot start, maybe already cleaning (expected)");
-						callback();
-					}
-				}
-				// Different room given
-				else
-				{
-					// Return to dock
-					if (this.robot.canPause || this.robot.canResume)
-					{
-						debug(this.name + ": ## Returning to dock to start cleaning of new room");
-						this.setGoToDock(true, (error, result) =>
-						{
-							this.nextRoom = this.boundary.id;
-							callback();
-						});
-					}
-					// Start new cleaning of new room
-					else
-					{
-						debug(this.name + ": ## Start cleaning of new room");
-						this.clean(callback);
-					}
-				}
-			}
-			// Stop
-			else
-			{
-				if (this.robot.canPause)
-				{
-					debug(this.name + ": ## Pause cleaning");
-					this.robot.pauseCleaning((error) =>
-					{
-						callback(error);
-					});
-				}
-				else
-				{
-					debug(this.name + ": Already paused");
-					callback();
-				}
-			}
-		});
+		
 	},
 
 	clean: function (callback, spot)

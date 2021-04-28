@@ -26,7 +26,7 @@ function NeatoVacuumRobotPlatform(log, config)
 	this.hiddenServices = ('hidden' in config ? config['hidden'] : this.hiddenServices);
 
 	// Array of real robots and associated robot accessories (incl rooms)
-	this.robots = [];
+	this.robotAccessories = [];
 	this.nextRoom = null;
 
 	if ('refresh' in config && config['refresh'] !== 'auto')
@@ -149,7 +149,7 @@ NeatoVacuumRobotPlatform.prototype = {
 					else if (robots.length === 0)
 					{
 						this.log.error("Successful login but no robots associated with your account.");
-						this.robots = [];
+						this.robotAccessories = [];
 						callback();
 					}
 					else
