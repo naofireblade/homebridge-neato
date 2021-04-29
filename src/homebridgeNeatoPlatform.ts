@@ -49,135 +49,148 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		debug("Discovering new robots");
 		let client = new NeatoApi.Client();
 
-		// Login
-		client.authorize((this.config)['email'], (this.config)['password'], false, (error) => {
-			if (error)
-			{
-				this.log.error("Can't log on to neato cloud. Please check your internet connection and your credentials. Try again later if the neato servers have issues: " + error);
-				return;
-			}
-			else
-			{
-				// Get all robots
+		try
+		{
+			// Login
+			client.authorize((this.config)['email'], (this.config)['password'], false, (error) => {
+				if (error)
+				{
+					throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+				}
+
+				// Get all robots from account
 				client.getRobots((error, robots) => {
 					if (error)
 					{
 						this.log.error("Successful login but can't connect to your neato robot: " + error);
-						return;
+						throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 					}
 					else if (robots.length === 0)
 					{
 						this.log.error("Successful login but no robots associated with your account.");
-						return;
+						throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 					}
-					else
-					{
-						debug("Found " + robots.length + " robots");
-						let loadedRobots = 0;
 
-						robots.forEach((robot) => {
-							// Get additional information for the robot
-							robot.getState((error, state) => {
-								if (error)
+					debug("Found " + robots.length + " robots");
+					let loadedRobots = 0;
+
+					for (let robot of robots)
+					{
+						// Get additional information for the robot
+						robot.getState((error, state) => {
+							this.log.debug("Got state for robot: " + robot.name);
+							robot.meta = state.meta;
+
+							if (error)
+							{
+								this.log.error("Error getting robot meta information: " + error + ": " + state);
+								throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+							}
+
+							try
+							{
+								const uuid = this.api.hap.uuid.generate(robot._serial);
+								const existingAccessory = this.robotAccessories.find(accessory => accessory.UUID === uuid);
+
+								if (existingAccessory)
 								{
-									this.log.error("Error getting robot meta information: " + error + ": " + state);
-									return;
+									// the accessory already exists
+									this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+									existingAccessory.context.robot = robot;
+									// TODO update maps
+
+									// if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
+									// existingAccessory.context.device = device;
+									// this.api.updatePlatformAccessories([existingAccessory]);
+
+									// create the accessory handler for the restored accessory
+									// this is imported from `platformAccessory.ts`
+									new NeatoVacuumRobotAccessory(this, existingAccessory, false);
+
+									// it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
+									// remove platform accessories when no longer present
+									// this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+									// this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
 								}
 								else
 								{
-									const uuid = this.api.hap.uuid.generate(robot._serial);
-									const existingAccessory = this.robotAccessories.find(accessory => accessory.UUID === uuid);
+									this.log.info('Adding new accessory: ', robot.name);
+									const accessory = new this.api.platformAccessory(robot.name, uuid);
 
-									if (existingAccessory)
-									{
-										// the accessory already exists
-										this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+									accessory.context.robot = robot;
+									new NeatoVacuumRobotAccessory(this, accessory, true);
 
-										// TODO update maps
-
-										// if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-										// existingAccessory.context.device = device;
-										// this.api.updatePlatformAccessories([existingAccessory]);
-
-										// create the accessory handler for the restored accessory
-										// this is imported from `platformAccessory.ts`
-										new NeatoVacuumRobotAccessory(this, existingAccessory, false);
-
-										// it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-										// remove platform accessories when no longer present
-										// this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-										// this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
-									}
-									else
-									{
-										this.log.info('Adding new accessory: ', robot.name);
-										const accessory = new this.api.platformAccessory(robot.name, uuid);
-
-										accessory.context.robot = robot;
-										new NeatoVacuumRobotAccessory(this, accessory, true);
-
-										// link the accessory to your platform
-										this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-										// TODO get maps
-									}
-
-
-									// // Get all maps for each robot
-									// robot.getPersistentMaps((error, maps) => {
-									// 	if (error)
-									// 	{
-									// 		this.log.error("Error updating persistent maps: " + error + ": " + maps);
-									// 		callback();
-									// 	}
-									// 	// Robot has no maps
-									// 	else if (maps.length === 0)
-									// 	{
-									// 		robot.maps = [];
-									// 		this.robotAccessories.push({device: robot, meta: state.meta, availableServices: state.availableServices});
-									// 		loadedRobots++;
-									// 		if (loadedRobots === robots.length)
-									// 		{
-									// 			callback();
-									// 		}
-									// 	}
-									// 	// Robot has maps
-									// 	else
-									// 	{
-									// 		robot.maps = maps;
-									// 		let loadedMaps = 0;
-									// 		robot.maps.forEach((map) => {
-									// 			// Save zones in each map
-									// 			robot.getMapBoundaries(map.id, (error, result) => {
-									// 				if (error)
-									// 				{
-									// 					this.log.error("Error getting boundaries: " + error + ": " + result)
-									// 				}
-									// 				else
-									// 				{
-									// 					map.boundaries = result.boundaries;
-									// 				}
-									// 				loadedMaps++;
-									//
-									// 				// Robot is completely requested if zones for all maps are loaded
-									// 				if (loadedMaps === robot.maps.length)
-									// 				{
-									// 					this.robotAccessories.push({device: robot, meta: state.meta, availableServices: state.availableServices});
-									// 					loadedRobots++;
-									// 					if (loadedRobots === robots.length)
-									// 					{
-									// 						callback();
-									// 					}
-									// 				}
-									// 			})
-									// 		});
-									// 	}
-									// });
+									// link the accessory to your platform
+									this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+									// TODO get maps
 								}
-							});
+							}
+							catch (error)
+							{
+								this.log.error("Error creating robot accessory: " + robot.name);
+								this.log.error(error);
+								throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+							}
+
+
+							// // Get all maps for each robot
+							// robot.getPersistentMaps((error, maps) => {
+							// 	if (error)
+							// 	{
+							// 		this.log.error("Error updating persistent maps: " + error + ": " + maps);
+							// 		callback();
+							// 	}
+							// 	// Robot has no maps
+							// 	else if (maps.length === 0)
+							// 	{
+							// 		robot.maps = [];
+							// 		this.robotAccessories.push({device: robot, meta: state.meta, availableServices: state.availableServices});
+							// 		loadedRobots++;
+							// 		if (loadedRobots === robots.length)
+							// 		{
+							// 			callback();
+							// 		}
+							// 	}
+							// 	// Robot has maps
+							// 	else
+							// 	{
+							// 		robot.maps = maps;
+							// 		let loadedMaps = 0;
+							// 		robot.maps.forEach((map) => {
+							// 			// Save zones in each map
+							// 			robot.getMapBoundaries(map.id, (error, result) => {
+							// 				if (error)
+							// 				{
+							// 					this.log.error("Error getting boundaries: " + error + ": " + result)
+							// 				}
+							// 				else
+							// 				{
+							// 					map.boundaries = result.boundaries;
+							// 				}
+							// 				loadedMaps++;
+							//
+							// 				// Robot is completely requested if zones for all maps are loaded
+							// 				if (loadedMaps === robot.maps.length)
+							// 				{
+							// 					this.robotAccessories.push({device: robot, meta: state.meta, availableServices: state.availableServices});
+							// 					loadedRobots++;
+							// 					if (loadedRobots === robots.length)
+							// 					{
+							// 						callback();
+							// 					}
+							// 				}
+							// 			})
+							// 		});
+							// 	}
+							// });
 						});
 					}
 				});
-			}
-		});
+			});
+		}
+		catch (error)
+		{
+			this.log.error("Can't log on to neato cloud. Please check your internet connection and your credentials. Try again later if the neato servers have issues: " + error);
+		}
 	}
 }

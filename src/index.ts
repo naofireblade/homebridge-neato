@@ -1,7 +1,7 @@
 import { API } from 'homebridge';
 
 import { PLATFORM_NAME } from './settings';
-import { HomebridgeNeatoPlatform } from './platform';
+import { HomebridgeNeatoPlatform } from './homebridgeNeatoPlatform';
 
 /**
  * This method registers the platform with Homebridge

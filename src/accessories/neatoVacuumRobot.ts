@@ -1,4 +1,4 @@
-import {CharacteristicValue, PlatformAccessory, Service} from 'homebridge';
+import {CharacteristicValue, Logger, PlatformAccessory, Service} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
 
 const debug = require('debug')('my-app:my-module');
@@ -10,14 +10,15 @@ const debug = require('debug')('my-app:my-module');
 export class NeatoVacuumRobotAccessory
 {
 	private cleanService: Service;
+	private findMeService: Service;
 	private robot: any;
+	private log: Logger;
 	// private goToDockService: Service;
 	// private dockStateService: Service;
 	// private ecoService: Service;
 	// private noGoLinesService: Service;
 	// private extraCareService: Service;
 	// private scheduleService: Service;
-	// private findMeService: Service;
 	// private spotCleanService: Service;
 
 	/**
@@ -31,7 +32,8 @@ export class NeatoVacuumRobotAccessory
 			private readonly isNew: Boolean)
 	{
 		this.robot = accessory.context.robot;
-		
+		this.log = platform.log;
+
 		// set accessory information
 		this.accessory.getService(this.platform.Service.AccessoryInformation)!
 				.setCharacteristic(this.platform.Characteristic.Manufacturer, "Neato Robotics")
@@ -40,13 +42,17 @@ export class NeatoVacuumRobotAccessory
 				.setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.robot.meta.firmware)
 				.setCharacteristic(this.platform.Characteristic.Name, this.robot.name);
 
-
-		let cleanServiceName = robot.name + " Clean";
+		let cleanServiceName = this.robot.name + " Clean";
 		this.cleanService = this.accessory.getService(cleanServiceName) || this.accessory.addService(this.platform.Service.Switch, cleanServiceName, "CLEAN");
+		let findMeServiceName = this.robot.name + " Find Me";
+		this.findMeService = this.accessory.getService(findMeServiceName) || this.accessory.addService(this.platform.Service.Switch, findMeServiceName, "FIND_ME");
 		
 		this.cleanService.getCharacteristic(this.platform.Characteristic.On)
 				.onSet(this.setClean.bind(this))
 				.onGet(this.getClean.bind(this));
+		this.findMeService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
 
 		// /**
 		//  * Updating characteristics values asynchronously.
@@ -75,33 +81,33 @@ export class NeatoVacuumRobotAccessory
 	async setClean(on: CharacteristicValue)
 	{
 		// TODO debug(this.robot.name + ": " + (on ? "Enabled ".brightGreen : "Disabled".red) + " Clean " + (this.boundary ? JSON.stringify(this.boundary) : ''));
-		this.platform.updateRobot(this.robot._serial, (error, result) =>
+		try
 		{
+			await this.updateRobot();
+
 			// Start
 			if (on)
 			{
 				// No room given or same room
-				if (this.boundary == null || this.robot.cleaningBoundaryId === this.boundary.id)
+				if (this.robot.boundary == null || this.robot.cleaningBoundaryId === this.robot.boundary.id)
 				{
 					// Resume cleaning
 					if (this.robot.canResume)
 					{
-						debug(this.name + ": ## Resume cleaning");
-						this.robot.resumeCleaning((error) =>
-						{
-							callback(error);
-						});
+						debug(this.robot.name + ": ## Resume cleaning");
+						await this.robot.resumeCleaning();
+						return;
 					}
 					// Start cleaning
 					else if (this.robot.canStart)
 					{
-						this.clean(callback);
+						// TODO this.clean(callback);
 					}
 					// Cannot start
 					else
 					{
-						debug(this.name + ": Cannot start, maybe already cleaning (expected)");
-						callback();
+						// TODO debug(this.name + ": Cannot start, maybe already cleaning (expected)");
+						return;
 					}
 				}
 				// Different room given
@@ -110,18 +116,18 @@ export class NeatoVacuumRobotAccessory
 					// Return to dock
 					if (this.robot.canPause || this.robot.canResume)
 					{
-						debug(this.name + ": ## Returning to dock to start cleaning of new room");
-						this.setGoToDock(true, (error, result) =>
-						{
-							this.nextRoom = this.boundary.id;
-							callback();
-						});
+						// debug(this.name + ": ## Returning to dock to start cleaning of new room");
+						// this.setGoToDock(true, (error, result) =>
+						// {
+						// 	this.nextRoom = this.boundary.id;
+						// 	callback();
+						// });
 					}
 					// Start new cleaning of new room
 					else
 					{
-						debug(this.name + ": ## Start cleaning of new room");
-						this.clean(callback);
+						// debug(this.name + ": ## Start cleaning of new room");
+						// this.clean(callback);
 					}
 				}
 			}
@@ -130,32 +136,99 @@ export class NeatoVacuumRobotAccessory
 			{
 				if (this.robot.canPause)
 				{
-					debug(this.name + ": ## Pause cleaning");
-					this.robot.pauseCleaning((error) =>
-					{
-						callback(error);
-					});
+					// debug(this.name + ": ## Pause cleaning");
+					// this.robot.pauseCleaning((error) => {
+					// 	callback(error);
+					// });
 				}
 				else
 				{
-					debug(this.name + ": Already paused");
-					callback();
+					// debug(this.name + ": Already paused");
+					// callback();
 				}
 			}
-		});
+		}
+		catch (error)
+		{
+			this.log.warn("Cannot start cleaning: " + error);
+			throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+		}
 	}
 	
 	async getClean(): Promise<CharacteristicValue>
 	{
-		// implement your own code to check if the device is on
-		const isOn = this.exampleStates.On;
+		try
+		{
+			await this.updateRobot();
 
-		this.platform.log.debug('Get Characteristic On ->', isOn);
+			let cleaning;
+			if (this.robot.boundary == null)
+			{
+				cleaning = this.robot.canPause;
+			}
+			else
+			{
+				cleaning = this.robot.canPause && (this.robot.cleaningBoundaryId === this.robot.boundary.id)
+			}
 
-		// if you need to return an error to show the device as "Not Responding" in the Home app:
-		// throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+			// TODO debug(this.robot.name + ": Cleaning is " + (cleaning ? 'ON'.brightGreen : 'OFF'.red));
+			return cleaning;
+		}
+		catch (error)
+		{
+			this.log.warn("Cannot get cleaning status: " + error);
+			throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+		}
+	}
 
-		return isOn;
+
+	getFindMe()
+	{
+		return false;
+	}
+
+	async setFindMe(on: CharacteristicValue)
+	{
+		if (on)
+		{
+			// TODO debug(this.name + ": ## Find me");
+			setTimeout(() => {
+				this.findMeService.updateCharacteristic(this.platform.Characteristic.On, false);
+			}, 1000);
+			
+			try
+			{
+				await this.robot.findMe();
+			}
+			catch (error)
+			{
+				this.log.warn("Cannot start find me: " + error);
+				throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+			}
+		}
+	}
+
+	async updateRobot()
+	{
+		// Data is up to date
+		if (typeof (this.robot.lastUpdate) !== 'undefined' && new Date().getTime() - this.robot.lastUpdate < 2000)
+		{
+			return;
+		}
+		else
+		{
+			debug(this.robot.name + ": ++ Updating robot state");
+			this.robot.lastUpdate = new Date().getTime();
+			try
+			{
+				await this.robot.getState();
+			}
+			catch (error)
+			{
+				this.log.error("Cannot update robot " + this.robot.name + ". Check if robot is online. " + error);
+				return false;
+			}
+		}
 	}
 	
 

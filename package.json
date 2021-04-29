@@ -48,7 +48,7 @@
   "dependencies": {
     "colors": "^1.4.0",
     "debug": "^4.1.1",
-    "node-botvac": "^0.4.0",
+    "node-botvac": "^0.4.1",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
