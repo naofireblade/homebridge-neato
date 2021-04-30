@@ -207,7 +207,6 @@ NeatoVacuumRobotPlatform.prototype = {
 														map.boundaries = result.boundaries;
 													}
 													loadedMaps++;
-
 													// Robot is completely requested if zones for all maps are loaded
 													if (loadedMaps === robot.maps.length)
 													{

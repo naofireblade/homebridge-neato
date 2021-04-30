@@ -24,7 +24,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 			public readonly config: PlatformConfig,
 			public readonly api: API)
 	{
-		this.log.debug('Finished initializing platform:', this.config.name);
+		this.log.debug('Finished initializing platform:', this.config.platform);
 
 		this.api.on('didFinishLaunching', () => {
 			log.debug('Executed didFinishLaunching callback');
@@ -55,7 +55,10 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 			client.authorize((this.config)['email'], (this.config)['password'], false, (error) => {
 				if (error)
 				{
-					throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+					this.log.warn("Cannot connect to neato server. No new robots will be found and existing robots will be unresponsive.");
+					this.log.warn(error);
+					// TODO retry after x min
+					return;
 				}
 
 				// Get all robots from account
@@ -63,12 +66,14 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 					if (error)
 					{
 						this.log.error("Successful login but can't connect to your neato robot: " + error);
-						throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+						// TODO retry after x min
+						return;
 					}
 					else if (robots.length === 0)
 					{
 						this.log.error("Successful login but no robots associated with your account.");
-						throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+						// TODO retry after x min
+						return;
 					}
 
 					debug("Found " + robots.length + " robots");
@@ -84,7 +89,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 							if (error)
 							{
 								this.log.error("Error getting robot meta information: " + error + ": " + state);
-								throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+								return;
 							}
 
 							try
@@ -105,7 +110,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 									// create the accessory handler for the restored accessory
 									// this is imported from `platformAccessory.ts`
-									new NeatoVacuumRobotAccessory(this, existingAccessory, false);
+									new NeatoVacuumRobotAccessory(this, existingAccessory, false, this.config);
 
 									// it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
 									// remove platform accessories when no longer present
@@ -118,7 +123,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 									const accessory = new this.api.platformAccessory(robot.name, uuid);
 
 									accessory.context.robot = robot;
-									new NeatoVacuumRobotAccessory(this, accessory, true);
+									new NeatoVacuumRobotAccessory(this, accessory, true, this.config);
 
 									// link the accessory to your platform
 									this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);

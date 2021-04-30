@@ -1,7 +1,8 @@
-import {CharacteristicValue, Logger, PlatformAccessory, Service} from 'homebridge';
+import {CharacteristicValue, Logger, PlatformAccessory, PlatformConfig, Service} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
 
 const debug = require('debug')('my-app:my-module');
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -13,6 +14,7 @@ export class NeatoVacuumRobotAccessory
 	private findMeService: Service;
 	private robot: any;
 	private log: Logger;
+	private readonly refresh: any;
 	// private goToDockService: Service;
 	// private dockStateService: Service;
 	// private ecoService: Service;
@@ -29,10 +31,12 @@ export class NeatoVacuumRobotAccessory
 	constructor(
 			private readonly platform: HomebridgeNeatoPlatform,
 			private readonly accessory: PlatformAccessory,
-			private readonly isNew: Boolean)
+			private readonly isNew: Boolean,
+			private readonly config: PlatformConfig)
 	{
 		this.robot = accessory.context.robot;
 		this.log = platform.log;
+		this.refresh = (this.config)['refresh'];
 
 		// set accessory information
 		this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -46,7 +50,7 @@ export class NeatoVacuumRobotAccessory
 		this.cleanService = this.accessory.getService(cleanServiceName) || this.accessory.addService(this.platform.Service.Switch, cleanServiceName, "CLEAN");
 		let findMeServiceName = this.robot.name + " Find Me";
 		this.findMeService = this.accessory.getService(findMeServiceName) || this.accessory.addService(this.platform.Service.Switch, findMeServiceName, "FIND_ME");
-		
+
 		this.cleanService.getCharacteristic(this.platform.Characteristic.On)
 				.onSet(this.setClean.bind(this))
 				.onGet(this.getClean.bind(this));
@@ -154,7 +158,7 @@ export class NeatoVacuumRobotAccessory
 			throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 		}
 	}
-	
+
 	async getClean(): Promise<CharacteristicValue>
 	{
 		try
@@ -195,7 +199,7 @@ export class NeatoVacuumRobotAccessory
 			setTimeout(() => {
 				this.findMeService.updateCharacteristic(this.platform.Characteristic.On, false);
 			}, 1000);
-			
+
 			try
 			{
 				await this.robot.findMe();
@@ -230,7 +234,59 @@ export class NeatoVacuumRobotAccessory
 			}
 		}
 	}
-	
+
+	async clean(boundary, spot)
+	{
+		// Start automatic update while cleaning
+		if (this.refresh === 'auto')
+		{
+			setTimeout(() => {
+				this.platform.updateRobotTimer(this.robot._serial);
+			}, 60 * 1000);
+		}
+
+		let eco = this.robotObject.mainAccessory.ecoService.getCharacteristic(Characteristic.On).value;
+		let extraCare = this.robotObject.mainAccessory.extraCareService.getCharacteristic(Characteristic.On).value;
+		let nogoLines = this.robotObject.mainAccessory.noGoLinesService.getCharacteristic(Characteristic.On).value;
+		let room = (this.boundary == null) ? '' : this.boundary.name;
+		debug(this.name + ": ## Start cleaning (" + (room !== '' ? room + " " : '') + "eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ", spot: " + JSON.stringify(spot)
+				+ ")");
+
+		// Normal cleaning
+		if (this.boundary == null && (typeof spot === 'undefined'))
+		{
+			this.robot.startCleaning(eco, extraCare ? 2 : 1, nogoLines, (error, result) => {
+				if (error)
+				{
+					this.log.error("Cannot start cleaning. " + error + ": " + JSON.stringify(result));
+				}
+				callback(error);
+			});
+		}
+		// Room cleaning
+		else if (room !== '')
+		{
+			this.robot.startCleaningBoundary(eco, extraCare, this.boundary.id, (error, result) => {
+				if (error)
+				{
+					this.log.error("Cannot start room cleaning. " + error + ": " + JSON.stringify(result));
+				}
+				callback(error);
+			});
+		}
+		// Spot cleaning
+		else
+		{
+			this.robot.startSpotCleaning(eco, spot.width, spot.height, spot.repeat, extraCare ? 2 : 1, (error, result) => {
+				if (error)
+				{
+					this.log.error("Cannot start spot cleaning. " + error + ": " + JSON.stringify(result));
+				}
+				callback(error);
+			});
+		}
+	}
+
 
 	// /**
 	//  * Handle the "GET" requests from HomeKit
