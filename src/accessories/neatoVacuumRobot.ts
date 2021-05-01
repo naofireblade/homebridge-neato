@@ -10,18 +10,20 @@ const debug = require('debug')('my-app:my-module');
  */
 export class NeatoVacuumRobotAccessory
 {
-	private cleanService: Service;
-	private findMeService: Service;
+
 	private robot: any;
 	private log: Logger;
 	private readonly refresh: any;
-	// private goToDockService: Service;
-	// private dockStateService: Service;
-	// private ecoService: Service;
-	// private noGoLinesService: Service;
-	// private extraCareService: Service;
-	// private scheduleService: Service;
-	// private spotCleanService: Service;
+
+	private cleanService: Service;
+	private findMeService: Service;
+	private goToDockService: Service;
+	private dockStateService: Service;
+	private ecoService: Service;
+	private noGoLinesService: Service;
+	private extraCareService: Service;
+	private scheduleService: Service;
+	private spotCleanService: Service;
 
 	/**
 	 * These are just used to create a working example
@@ -47,9 +49,24 @@ export class NeatoVacuumRobotAccessory
 				.setCharacteristic(this.platform.Characteristic.Name, this.robot.name);
 
 		let cleanServiceName = this.robot.name + " Clean";
-		this.cleanService = this.accessory.getService(cleanServiceName) || this.accessory.addService(this.platform.Service.Switch, cleanServiceName, "CLEAN");
 		let findMeServiceName = this.robot.name + " Find Me";
-		this.findMeService = this.accessory.getService(findMeServiceName) || this.accessory.addService(this.platform.Service.Switch, findMeServiceName, "FIND_ME");
+		let goToDockServiceName = this.robot.name + " Go to Dock";
+		let dockStateServiceName = this.robot.name + " Docked";
+		let ecoServiceName = this.robot.name + " Eco Mode";
+		let noGoLinesServiceName = this.robot.name + " NoGo Lines";
+		let extraCareServiceName = this.robot.name + " Extra Care";
+		let scheduleServiceName = this.robot.name + " Schedule";
+		let spotCleanServiceName = this.robot.name + " Clean Spot";
+
+		this.cleanService = this.getSwitchService(cleanServiceName);
+		this.findMeService = this.getSwitchService(findMeServiceName);
+		this.goToDockService = this.getSwitchService(goToDockServiceName);
+		this.dockStateService = this.accessory.getService(dockStateServiceName) || this.accessory.addService(this.platform.Service.Switch, dockStateServiceName, dockStateServiceName);
+		this.ecoService = this.getSwitchService(ecoServiceName);
+		this.noGoLinesService = this.getSwitchService(noGoLinesServiceName);
+		this.extraCareService = this.getSwitchService(extraCareServiceName);
+		this.scheduleService = this.getSwitchService(scheduleServiceName);
+		this.spotCleanService = this.getSwitchService(spotCleanServiceName);
 
 		this.cleanService.getCharacteristic(this.platform.Characteristic.On)
 				.onSet(this.setClean.bind(this))
@@ -57,30 +74,32 @@ export class NeatoVacuumRobotAccessory
 		this.findMeService.getCharacteristic(this.platform.Characteristic.On)
 				.onSet(this.setFindMe.bind(this))
 				.onGet(this.getFindMe.bind(this));
-
-		// /**
-		//  * Updating characteristics values asynchronously.
-		//  *
-		//  * Example showing how to update the state of a Characteristic asynchronously instead
-		//  * of using the `on('get')` handlers.
-		//  * Here we change update the motion sensor trigger states on and off every 10 seconds
-		//  * the `updateCharacteristic` method.
-		//  *
-		//  */
-		// let motionDetected = false;
-		// setInterval(() => {
-		// 	// EXAMPLE - inverse the trigger
-		// 	motionDetected = !motionDetected;
-		//
-		// 	// push the new value to HomeKit
-		// 	motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
-		// 	motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
-		//
-		// 	this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-		// 	this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
-		// }, 10000);
+		this.goToDockService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
+		this.dockStateService.getCharacteristic(this.platform.Characteristic.On)
+				.onGet(this.getFindMe.bind(this));
+		this.ecoService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
+		this.noGoLinesService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
+		this.extraCareService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
+		this.scheduleService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
+		this.spotCleanService.getCharacteristic(this.platform.Characteristic.On)
+				.onSet(this.setFindMe.bind(this))
+				.onGet(this.getFindMe.bind(this));
 	}
 
+	getSwitchService(servicename: string)
+	{
+		return this.accessory.getService(servicename) || this.accessory.addService(this.platform.Service.Switch, servicename, servicename)
+	}
 
 	async setClean(on: CharacteristicValue)
 	{
@@ -241,49 +260,84 @@ export class NeatoVacuumRobotAccessory
 		if (this.refresh === 'auto')
 		{
 			setTimeout(() => {
-				this.platform.updateRobotTimer(this.robot._serial);
+				this.updateRobotPeriodically();
 			}, 60 * 1000);
 		}
 
-		let eco = this.robotObject.mainAccessory.ecoService.getCharacteristic(Characteristic.On).value;
-		let extraCare = this.robotObject.mainAccessory.extraCareService.getCharacteristic(Characteristic.On).value;
-		let nogoLines = this.robotObject.mainAccessory.noGoLinesService.getCharacteristic(Characteristic.On).value;
-		let room = (this.boundary == null) ? '' : this.boundary.name;
-		debug(this.name + ": ## Start cleaning (" + (room !== '' ? room + " " : '') + "eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ", spot: " + JSON.stringify(spot)
-				+ ")");
+		let eco = this.ecoService.getCharacteristic(this.platform.Characteristic.On).value;
+		let extraCare = this.extraCareService.getCharacteristic(this.platform.Characteristic.On).value;
+		let nogoLines = this.noGoLinesService.getCharacteristic(this.platform.Characteristic.On).value;
+		let room = (boundary == null) ? '' : boundary.name;
+		// debug(this.robot.name + ": ## Start cleaning (" + (room !== '' ? room + " " : '') + "eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ", spot: " + JSON.stringify(spot) + ")");
+		debug(this.robot.name + ": ## Start cleaning eco: " + eco + ", extraCare: " + extraCare + ", nogoLines: " + nogoLines + ", spot: " + JSON.stringify(spot) + ")");
 
 		// Normal cleaning
-		if (this.boundary == null && (typeof spot === 'undefined'))
+		if (boundary == null && (typeof spot === 'undefined'))
 		{
-			this.robot.startCleaning(eco, extraCare ? 2 : 1, nogoLines, (error, result) => {
-				if (error)
-				{
-					this.log.error("Cannot start cleaning. " + error + ": " + JSON.stringify(result));
-				}
-				callback(error);
-			});
+			try
+			{
+				await this.robot.startCleaning(eco, extraCare ? 2 : 1, nogoLines);
+			}
+			catch (error)
+			{
+				this.log.error("Cannot start cleaning. " + error);
+			}
 		}
 		// Room cleaning
 		else if (room !== '')
 		{
-			this.robot.startCleaningBoundary(eco, extraCare, this.boundary.id, (error, result) => {
-				if (error)
-				{
-					this.log.error("Cannot start room cleaning. " + error + ": " + JSON.stringify(result));
-				}
-				callback(error);
-			});
+			try
+			{
+				await this.robot.startCleaningBoundary(eco, extraCare, boundary.id);
+			}
+			catch (error)
+			{
+				this.log.error("Cannot start room cleaning. " + error);
+			}
 		}
 		// Spot cleaning
 		else
 		{
-			this.robot.startSpotCleaning(eco, spot.width, spot.height, spot.repeat, extraCare ? 2 : 1, (error, result) => {
-				if (error)
-				{
-					this.log.error("Cannot start spot cleaning. " + error + ": " + JSON.stringify(result));
-				}
-				callback(error);
-			});
+			try
+			{
+				await this.robot.startSpotCleaning(eco, spot.width, spot.height, spot.repeat, extraCare ? 2 : 1);
+			}
+			catch (error)
+			{
+				this.log.error("Cannot start spot cleaning. " + error);
+			}
+		}
+	}
+
+	async updateRobotPeriodically()
+	{
+		await this.updateRobot()
+
+		// Clear any other overlapping timers for this robot
+		clearTimeout(this.robot.timer);
+
+		// Tell all accessories of this robot (mainAccessory and roomAccessories) that updated robot data is available
+		this.robot.mainAccessory.updated();
+		this.robot.roomAccessories.forEach(accessory => {
+			accessory.updated();
+		});
+
+		// Periodic refresh interval set in config
+		if (this.refresh !== 'auto' && this.refresh !== 0)
+		{
+			this.log.debug(this.robot.device.name + ": ++ Next background update in " + this.refresh + " seconds");
+			this.robot.timer = setTimeout(this.updateRobotPeriodically.bind(this), this.refresh * 1000);
+		}
+		// Auto refresh set in config
+		else if (this.refresh === 'auto' && this.robot.device.canPause)
+		{
+			this.log.debug(this.robot.device.name + ": ++ Next background update in 60 seconds while cleaning (auto mode)");
+			this.robot.timer = setTimeout(this.updateRobotPeriodically.bind(this), 60 * 1000);
+		}
+		// No refresh
+		else
+		{
+			debug(this.robot.device.name + ": ++ Stopped background updates");
 		}
 	}
 
