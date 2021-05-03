@@ -1,10 +1,7 @@
 import {API, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service} from 'homebridge';
-import Debug from "debug";
 import NeatoApi from "node-botvac";
 import {PLATFORM_NAME, PLUGIN_NAME} from './settings';
 import {NeatoVacuumRobotAccessory} from './accessories/NeatoVacuumRobot';
-
-const debug = Debug("homebridge-neato");
 
 /**
  * HomebridgePlatform
@@ -24,10 +21,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 			public readonly config: PlatformConfig,
 			public readonly api: API)
 	{
-		this.log.debug('Finished initializing platform:', this.config.platform);
-
 		this.api.on('didFinishLaunching', () => {
-			log.debug('Executed didFinishLaunching callback');
 			this.discoverRobots();
 		});
 	}
@@ -38,15 +32,12 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 	 */
 	configureAccessory(accessory: PlatformAccessory)
 	{
-		this.log.info('Loading accessory from cache:', accessory.displayName);
-
 		// add the restored accessory to the accessories cache so we can track if it has already been registered
 		this.robotAccessories.push(accessory);
 	}
 
 	discoverRobots()
 	{
-		debug("Discovering new robots");
 		let client = new NeatoApi.Client();
 
 		try
@@ -76,16 +67,12 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						return;
 					}
 
-					debug("Found " + robots.length + " robots");
-					let loadedRobots = 0;
+					this.log.debug("Neato account has " + robots.length + " robot " + (robots.length == 1 ? "" : "s"));
 
 					for (let robot of robots)
 					{
 						// Get additional information for the robot
 						robot.getState((error, state) => {
-							this.log.debug("Got state for robot: " + robot.name);
-							robot.meta = state.meta;
-
 							if (error)
 							{
 								this.log.error("Error getting robot meta information: " + error + ": " + state);
@@ -94,32 +81,25 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 							try
 							{
+								robot.meta = state.meta;
+
 								const uuid = this.api.hap.uuid.generate(robot._serial);
 								const existingAccessory = this.robotAccessories.find(accessory => accessory.UUID === uuid);
 
+								// the accessory already exists
 								if (existingAccessory)
 								{
-									// the accessory already exists
-									this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-									existingAccessory.context.robot = robot;
+									this.log.info("[" + robot.name + "] Robot loaded from cache");
 									// TODO update maps
 
-									// if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-									// existingAccessory.context.device = device;
-									// this.api.updatePlatformAccessories([existingAccessory]);
+									existingAccessory.context.robot = robot;
+									this.api.updatePlatformAccessories([existingAccessory]);
 
-									// create the accessory handler for the restored accessory
-									// this is imported from `platformAccessory.ts`
 									new NeatoVacuumRobotAccessory(this, existingAccessory, false, this.config);
-
-									// it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-									// remove platform accessories when no longer present
-									// this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-									// this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
 								}
 								else
 								{
-									this.log.info('Adding new accessory: ', robot.name);
+									this.log.info("[" + robot.name + "] Robot created");
 									const accessory = new this.api.platformAccessory(robot.name, uuid);
 
 									accessory.context.robot = robot;
