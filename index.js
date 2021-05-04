@@ -21,6 +21,7 @@ function NeatoVacuumRobotPlatform(log, config)
 	this.serial = "1-3-3-7";
 	this.email = config['email'];
 	this.password = config['password'];
+	this.language = config['language'];
 	this.hiddenServices = '';
 	this.hiddenServices = ('disabled' in config ? config['disabled'] : this.hiddenServices);
 	this.hiddenServices = ('hidden' in config ? config['hidden'] : this.hiddenServices);

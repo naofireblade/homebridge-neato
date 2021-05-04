@@ -38,6 +38,48 @@ function NeatoVacuumRobotAccessory(platform, robotObject)
 	this.spotPlusFeatures = ((typeof robotObject.availableServices.spotCleaning !== 'undefined') && robotObject.availableServices.spotCleaning.includes("basic"));
 	this.boundary = (typeof robotObject.boundary === 'undefined') ? null : robotObject.boundary;
 
+	this.dict = {
+		'en': {
+			"clean": "Clean",
+			"clean the": "Clean the",
+			"goToDock": "Go to Dock",
+			"dockState": "Dock",
+			"eco": "Eco Mode",
+			"noGoLines": "NoGo Lines",
+			"extraCare": "Extra Care",
+			"schedule": "Schedule",
+			"findMe": "Find me",
+			"cleanSpot": "Clean Spot",
+			"battery": "Battery"
+		},
+		'de': {
+			"clean": "Sauge",
+			"clean the": "Sauge",
+			"goToDock": "Zur Basis",
+			"dockState": "In der Basis",
+			"eco": "Eco Modus",
+			"noGoLines": "NoGo Linien",
+			"extraCare": "Extra Care",
+			"schedule": "Zeitplan",
+			"findMe": "Finde mich",
+			"cleanSpot": "Spot Reinigung",
+			"battery": "Batterie"
+		},
+		'fr': {
+			"clean": "Aspirer",
+			"clean the": "Aspirer",
+			"goToDock": "Retour à la base",
+			"dockState": "Sur la base",
+			"eco": "Eco mode",
+			"noGoLines": "Lignes NoGo",
+			"extraCare": "Extra Care",
+			"schedule": "Planifier",
+			"findMe": "Me retrouver",
+			"cleanSpot": "Nettoyage local",
+			"battery": "Batterie"
+		}
+	}[this.platform.language]
+
 	if (this.boundary == null)
 	{
 		this.name = this.robot.name;
@@ -64,20 +106,20 @@ function NeatoVacuumRobotAccessory(platform, robotObject)
 		this.name = this.robot.name + ' - ' + this.boundary.name;
 	}
 
-	this.batteryService = new Service.BatteryService("Battery", "battery");
+	this.batteryService = new Service.BatteryService(this.name + " " + this.dict["battery"], "battery");
 
 	if (this.boundary == null)
 	{
-		this.cleanService = new Service.Switch(this.name + " Clean", "clean");
-		this.goToDockService = new Service.Switch(this.name + " Go to Dock", "goToDock");
-		this.dockStateService = new Service.OccupancySensor(this.name + " Dock", "dockState");
-		this.ecoService = new Service.Switch(this.name + " Eco Mode", "eco");
-		this.noGoLinesService = new Service.Switch(this.name + " NoGo Lines", "noGoLines");
-		this.extraCareService = new Service.Switch(this.name + " Extra Care", "extraCare");
-		this.scheduleService = new Service.Switch(this.name + " Schedule", "schedule");
-		this.findMeService = new Service.Switch(this.name + " Find Me", "findMe");
+		this.cleanService = new Service.Switch(this.name + " " + this.dict["clean"], "clean");
+		this.goToDockService = new Service.Switch(this.name + " " + this.dict["goToDock"], "goToDock");
+		this.dockStateService = new Service.OccupancySensor(this.name + " " + this.dict["dockState"], "dockState");
+		this.ecoService = new Service.Switch(this.name + " " + this.dict["eco"], "eco");
+		this.noGoLinesService = new Service.Switch(this.name + " " + this.dict["noGoLines"], "noGoLines");
+		this.extraCareService = new Service.Switch(this.name + " " + this.dict["extraCare"], "extraCare");
+		this.scheduleService = new Service.Switch(this.name + " " + this.dict["schedule"], "schedule");
+		this.findMeService = new Service.Switch(this.name + " " + this.dict["findMe"], "findMe");
 
-		this.spotCleanService = new Service.Switch(this.name + " Clean Spot", "cleanSpot");
+		this.spotCleanService = new Service.Switch(this.name + " " + this.dict["cleanSpot"], "cleanSpot");
 		this.spotCleanService.addCharacteristic(SpotRepeatCharacteristic);
 		if (this.spotPlusFeatures)
 		{
@@ -88,10 +130,10 @@ function NeatoVacuumRobotAccessory(platform, robotObject)
 	else
 	{
 		const splitName = this.boundary.name.split(' ');
-		let serviceName = "Clean the " + this.boundary.name;
+		let serviceName = this.dict["clean the"] + " " + this.boundary.name;
 		if (splitName.length >= 2 && splitName[splitName.length - 2].match(/[']s$/g))
 		{
-			serviceName = "Clean " + this.boundary.name;
+			serviceName = this.dict["clean"] + " " + this.boundary.name;
 		}
 		this.cleanService = new Service.Switch(serviceName, "cleanBoundary:" + this.boundary.id);
 	}
