@@ -12,16 +12,16 @@ export class NeatoVacuumRobotAccessory
 	// Homebridge
 	private log: Logger;
 	private batteryService: Service;
-	private cleanService: Service | null;
-	private findMeService: Service | null;
-	private goToDockService: Service | null;
-	private dockStateService: Service | null;
-	private binFullService: Service | null;
-	private ecoService: Service | null;
-	private noGoLinesService: Service | null;
-	private extraCareService: Service | null;
-	private scheduleService: Service | null;
-	private spotCleanService: Service | null;
+	private readonly cleanService: Service | null;
+	private readonly findMeService: Service | null;
+	private readonly goToDockService: Service | null;
+	private readonly dockStateService: Service | null;
+	private readonly binFullService: Service | null;
+	private readonly ecoService: Service | null;
+	private readonly noGoLinesService: Service | null;
+	private readonly extraCareService: Service | null;
+	private readonly scheduleService: Service | null;
+	private readonly spotCleanService: Service | null;
 
 	// Context
 	private robot: any;
@@ -171,14 +171,14 @@ export class NeatoVacuumRobotAccessory
 	private getSwitchService(serviceName: string)
 	{
 		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
-		
+
 		if (this.availableServices.includes(serviceName))
 		{
 			return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName);
 		}
 		else
 		{
-			if(this.accessory.getService(displayName))
+			if (this.accessory.getService(displayName))
 			{
 				this.accessory.removeService(<Service>this.accessory.getService(displayName));
 			}
@@ -196,7 +196,7 @@ export class NeatoVacuumRobotAccessory
 		}
 		else
 		{
-			if(this.accessory.getService(displayName))
+			if (this.accessory.getService(displayName))
 			{
 				this.accessory.removeService(<Service>this.accessory.getService(displayName));
 			}
