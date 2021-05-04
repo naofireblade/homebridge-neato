@@ -31,6 +31,7 @@ Feel free to leave any feedback [here](https://github.com/naofireblade/homebridg
   - Model and firmware version
 - Automatic or periodic refresh of robot state
 - Multiple robots
+- Multiple language support (en, de, fr)
 
 > <b name="d7">1</b> Only available on the Neato D7.  
 
@@ -58,7 +59,8 @@ Add the following information to your config file. Change the values for email a
 	{
 		"platform": "NeatoVacuumRobot",
 		"email": "YourEmail",
-		"password": "YourPassword"
+		"password": "YourPassword",
+		"language": "de"
 	}
 ]
 ```
@@ -82,6 +84,7 @@ List of plugin features that you don't want to use in homekit (e.g. `dock`, `doc
 		"platform": "NeatoVacuumRobot",
 		"email": "YourEmail",
 		"password": "YourPassword",
+		"language": "de",
 		"refresh": "120",
 		"hidden": ["dock", "dockstate", "eco", "nogolines", "extracare", "schedule", "find", "spot"]
 	}
