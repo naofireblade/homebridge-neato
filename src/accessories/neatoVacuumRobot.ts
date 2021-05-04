@@ -12,16 +12,16 @@ export class NeatoVacuumRobotAccessory
 	// Homebridge
 	private log: Logger;
 	private batteryService: Service;
-	private cleanService: Service;
-	private findMeService: Service;
-	private goToDockService: Service;
-	private dockStateService: Service;
-	private binFullService: Service;
-	private ecoService: Service;
-	private noGoLinesService: Service;
-	private extraCareService: Service;
-	private scheduleService: Service;
-	private spotCleanService: Service;
+	private cleanService: Service | null;
+	private findMeService: Service | null;
+	private goToDockService: Service | null;
+	private dockStateService: Service | null;
+	private binFullService: Service | null;
+	private ecoService: Service | null;
+	private noGoLinesService: Service | null;
+	private extraCareService: Service | null;
+	private scheduleService: Service | null;
+	private spotCleanService: Service | null;
 
 	// Context
 	private robot: any;
@@ -31,7 +31,7 @@ export class NeatoVacuumRobotAccessory
 	private readonly backgroundUpdateInterval: number;
 	private readonly prefix: boolean;
 	private readonly availableServices: string[];
-	
+
 	// Transient
 	private isSpotCleaning: boolean;
 	private timer: any;
@@ -47,14 +47,13 @@ export class NeatoVacuumRobotAccessory
 			private readonly config: PlatformConfig)
 	{
 		this.log = platform.log;
-		
+
 		this.robot = accessory.context.robot;
 		this.options = accessory.context.options || new Options();
 
 		this.backgroundUpdateInterval = NeatoVacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
 		this.prefix = this.config['prefix'] || PREFIX;
 		this.availableServices = this.config['services'] || SERVICES;
-		this.log.debug(JSON.stringify(this.availableServices));
 
 		this.isSpotCleaning = false;
 
@@ -75,50 +74,82 @@ export class NeatoVacuumRobotAccessory
 					this.debug(DebugType.INFO, JSON.stringify("Error: " + error));
 				}
 				this.debug(DebugType.INFO, "Status: " + JSON.stringify(result));
+				this.debug(DebugType.INFO,
+						"Config: Background Update Interval: " + this.backgroundUpdateInterval + ", Prefix: " + this.prefix + ", Enabled services: " + JSON.stringify(this.availableServices));
 			});
 		});
 
 		// Services
-		this.cleanService = this.getSwitchService("Clean House");
-		this.spotCleanService = this.getSwitchService("Clean Spot");
-		this.goToDockService = this.getSwitchService("Go to Dock");
-		this.dockStateService = this.getOccupancyService("Docked")
-		this.binFullService = this.getOccupancyService("Bin Full")
-		this.findMeService = this.getSwitchService("Find Me");
-		this.scheduleService = this.getSwitchService("Schedule");
-		this.ecoService = this.getSwitchService("Option: Eco Mode");
-		this.noGoLinesService = this.getSwitchService("Option: NoGo Lines");
-		this.extraCareService = this.getSwitchService("Option: Extra Care");
+		this.cleanService = this.getSwitchService(RobotService.CLEAN_HOUSE);
+		this.spotCleanService = this.getSwitchService(RobotService.CLEAN_SPOT);
+		this.goToDockService = this.getSwitchService(RobotService.GO_TO_DOCK);
+		this.dockStateService = this.getOccupancyService(RobotService.DOCKED)
+		this.binFullService = this.getOccupancyService(RobotService.BIN_FULL)
+		this.findMeService = this.getSwitchService(RobotService.FIND_ME);
+		this.scheduleService = this.getSwitchService(RobotService.SCHEDULE);
+		this.ecoService = this.getSwitchService(RobotService.ECO);
+		this.noGoLinesService = this.getSwitchService(RobotService.NOGO_LINES);
+		this.extraCareService = this.getSwitchService(RobotService.EXTRA_CARE);
 		this.batteryService = this.accessory.getService(this.platform.Service.Battery) || this.accessory.addService(this.platform.Service.Battery)
 
-		this.cleanService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setCleanHouse.bind(this))
-				.onGet(this.getCleanHouse.bind(this));
-		this.spotCleanService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setSpotClean.bind(this))
-				.onGet(this.getSpotClean.bind(this));
-		this.goToDockService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setGoToDock.bind(this))
-				.onGet(this.getGoToDock.bind(this));
-		this.dockStateService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
-				.onGet(this.getDocked.bind(this));
-		this.binFullService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
-				.onGet(this.getBinFull.bind(this));
-		this.findMeService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setFindMe.bind(this))
-				.onGet(this.getFindMe.bind(this));
-		this.scheduleService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setSchedule.bind(this))
-				.onGet(this.getSchedule.bind(this));
-		this.ecoService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setEco.bind(this))
-				.onGet(this.getEco.bind(this));
-		this.noGoLinesService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setNoGoLines.bind(this))
-				.onGet(this.getNoGoLines.bind(this));
-		this.extraCareService.getCharacteristic(this.platform.Characteristic.On)
-				.onSet(this.setExtraCare.bind(this))
-				.onGet(this.getExtraCare.bind(this));
+		if (this.cleanService)
+		{
+			this.cleanService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setCleanHouse.bind(this))
+					.onGet(this.getCleanHouse.bind(this));
+		}
+		if (this.spotCleanService)
+		{
+			this.spotCleanService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setSpotClean.bind(this))
+					.onGet(this.getSpotClean.bind(this));
+		}
+		if (this.goToDockService)
+		{
+			this.goToDockService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setGoToDock.bind(this))
+					.onGet(this.getGoToDock.bind(this));
+		}
+		if (this.dockStateService)
+		{
+			this.dockStateService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
+					.onGet(this.getDocked.bind(this));
+		}
+		if (this.binFullService)
+		{
+			this.binFullService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
+					.onGet(this.getBinFull.bind(this));
+		}
+		if (this.findMeService)
+		{
+			this.findMeService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setFindMe.bind(this))
+					.onGet(this.getFindMe.bind(this));
+		}
+		if (this.scheduleService)
+		{
+			this.scheduleService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setSchedule.bind(this))
+					.onGet(this.getSchedule.bind(this));
+		}
+		if (this.ecoService)
+		{
+			this.ecoService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setEco.bind(this))
+					.onGet(this.getEco.bind(this));
+		}
+		if (this.noGoLinesService)
+		{
+			this.noGoLinesService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setNoGoLines.bind(this))
+					.onGet(this.getNoGoLines.bind(this));
+		}
+		if (this.extraCareService)
+		{
+			this.extraCareService.getCharacteristic(this.platform.Characteristic.On)
+					.onSet(this.setExtraCare.bind(this))
+					.onGet(this.getExtraCare.bind(this));
+		}
 
 		// Start background update
 		this.updateRobotPeriodically().then(() => {
@@ -140,23 +171,47 @@ export class NeatoVacuumRobotAccessory
 	private getSwitchService(serviceName: string)
 	{
 		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
-		return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName)
+		
+		if (this.availableServices.includes(serviceName))
+		{
+			return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName);
+		}
+		else
+		{
+			if(this.accessory.getService(displayName))
+			{
+				this.accessory.removeService(<Service>this.accessory.getService(displayName));
+			}
+			return null;
+		}
 	}
 
 	private getOccupancyService(serviceName: string)
 	{
 		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
-		return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.OccupancySensor, displayName, serviceName)
+
+		if (this.availableServices.includes(serviceName))
+		{
+			return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.OccupancySensor, displayName, serviceName);
+		}
+		else
+		{
+			if(this.accessory.getService(displayName))
+			{
+				this.accessory.removeService(<Service>this.accessory.getService(displayName));
+			}
+			return null;
+		}
 	}
-	
+
 	private static parseBackgroundUpdateInterval(configValue: any)
 	{
 		// Parse as number
 		let backgroundUpdateInterval = parseInt(configValue) || BACKGROUND_INTERVAL;
-		
+
 		// must be integer and positive
 		backgroundUpdateInterval = ((backgroundUpdateInterval % 1) !== 0 || backgroundUpdateInterval < 0) ? BACKGROUND_INTERVAL : backgroundUpdateInterval;
-		
+
 		return backgroundUpdateInterval;
 	}
 
@@ -270,7 +325,10 @@ export class NeatoVacuumRobotAccessory
 			await this.updateRobot();
 
 			setTimeout(() => {
-				this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, false);
+				if (this.goToDockService)
+				{
+					this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, false);
+				}
 			}, 1000);
 
 			try
@@ -290,7 +348,7 @@ export class NeatoVacuumRobotAccessory
 				}
 				else
 				{
-					this.log.warn(this.robot.name + "=| Can't go to dock at the moment");
+					this.log.warn("[" + this.robot.name + "] Can't go to dock at the moment");
 				}
 			}
 			catch (error)
@@ -409,7 +467,10 @@ export class NeatoVacuumRobotAccessory
 		{
 			this.debug(DebugType.ACTION, "Find me");
 			setTimeout(() => {
-				this.findMeService.updateCharacteristic(this.platform.Characteristic.On, false);
+				if (this.findMeService)
+				{
+					this.findMeService.updateCharacteristic(this.platform.Characteristic.On, false);
+				}
 			}, 1000);
 
 			try
@@ -510,33 +571,30 @@ export class NeatoVacuumRobotAccessory
 
 	async updateCharacteristics()
 	{
-		// Update Switches
-		// Clean
-		this.cleanService.updateCharacteristic(this.platform.Characteristic.On, await this.getCleanHouse());
-
-		// Spot Clean
-		this.spotCleanService.updateCharacteristic(this.platform.Characteristic.On, await this.getSpotClean());
-
-		// Go To Dock
-		this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, await this.getGoToDock());
-
-		// Docked
-		this.dockStateService.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, await this.getDocked());
-
-		// Bin full
-		this.binFullService.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, await this.getBinFull());
-
-		// Schedule
-		this.scheduleService.updateCharacteristic(this.platform.Characteristic.On, await this.getSchedule());
-
-		// Eco
-		this.ecoService.updateCharacteristic(this.platform.Characteristic.On, await this.getEco());
-
-		// Extra Care
-		this.extraCareService.updateCharacteristic(this.platform.Characteristic.On, await this.getExtraCare());
-
-		// NoGo Lines
-		this.noGoLinesService.updateCharacteristic(this.platform.Characteristic.On, await this.getNoGoLines());
+		if (this.cleanService)
+		{
+			this.cleanService.updateCharacteristic(this.platform.Characteristic.On, await this.getCleanHouse());
+		}
+		if (this.spotCleanService)
+		{
+			this.spotCleanService.updateCharacteristic(this.platform.Characteristic.On, await this.getSpotClean());
+		}
+		if (this.goToDockService)
+		{
+			this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, await this.getGoToDock());
+		}
+		if (this.dockStateService)
+		{
+			this.dockStateService.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, await this.getDocked());
+		}
+		if (this.binFullService)
+		{
+			this.binFullService.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, await this.getBinFull());
+		}
+		if (this.scheduleService)
+		{
+			this.scheduleService.updateCharacteristic(this.platform.Characteristic.On, await this.getSchedule());
+		}
 	}
 
 	private debug(debugType: DebugType, message: String)
@@ -569,20 +627,20 @@ enum DebugType
 	INFO
 }
 
-enum Action
+enum RobotService
 {
-	CLEAN_HOUSE = "CLEAN_HOUSE",
-	CLEAN_SPOT = "CLEAN_SPOT",
-	GO_TO_DOCK = "GO_TO_DOCK",
-	DOCKED = "DOCKED",
-	BIN_FULL = "BIN_FULL",
-	FIND_ME = "FIND_ME",
-	SCHEDULE = "SCHEDULE",
-	ECO = "ECO",
-	NOGO_LINES = "NOGO_LINES",
-	EXTRA_CARE = "EXTRA_CARE"
+	CLEAN_HOUSE = "Clean house",
+	CLEAN_SPOT = "Clean spot",
+	GO_TO_DOCK = "Go to dock",
+	DOCKED = "Docked sensor",
+	BIN_FULL = "Bin full sensor",
+	FIND_ME = "Find me",
+	SCHEDULE = "Schedule",
+	ECO = "Eco",
+	NOGO_LINES = "Nogo lines",
+	EXTRA_CARE = "Extra care"
 }
 
 const BACKGROUND_INTERVAL = 30;
 const PREFIX = false;
-const SERVICES = Object.values(Action);
+const SERVICES = Object.values(RobotService);

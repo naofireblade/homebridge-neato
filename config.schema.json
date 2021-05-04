@@ -47,7 +47,18 @@
             "Bin full sensor"
           ]
         },
-        "uniqueItems": true
+        "default": [
+          "Clean house",
+          "Clean spot",
+          "Go to dock",
+          "Find me",
+          "Schedule",
+          "Eco",
+          "Nogo lines",
+          "Extra care",
+          "Docked sensor",
+          "Bin full sensor"
+        ]
       }
     }
   },
