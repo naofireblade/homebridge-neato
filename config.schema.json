@@ -17,6 +17,32 @@
             "type": "string",
             "required": true,
             "description": "Your Password"
+        },
+        "language": {
+          "title": "language",
+          "type": "string",
+          "default": "en",
+          "oneOf": [
+            {
+              "title": "English",
+              "enum": [
+                "en"
+              ]
+            },
+            {
+              "title": "German",
+              "enum": [
+                "de"
+              ]
+            },
+            {
+              "title": "French",
+              "enum": [
+                "fr"
+              ]
+            }
+          ],
+          "required": true
         }
       }
     }
