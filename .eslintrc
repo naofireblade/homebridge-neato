@@ -13,16 +13,16 @@
     "dist"
   ],
   "rules": {
-    "quotes": ["warn", "single"],
-    "indent": ["warn", 2, { "SwitchCase": 1 }],
+    "quotes": ["warn", "double"],
+    "indent": ["warn", "tab"],
     "semi": ["off"],
     "comma-dangle": ["warn", "always-multiline"],
     "dot-notation": "off",
     "eqeqeq": "warn",
     "curly": ["warn", "all"],
-    "brace-style": ["warn"],
+    "brace-style": ["warn", "allman"],
     "prefer-arrow-callback": ["warn"],
-    "max-len": ["warn", 140],
+    "max-len": ["warn", 200],
     "no-console": ["warn"], // use the provided Homebridge log method instead
     "no-non-null-assertion": ["off"],
     "comma-spacing": ["error"],

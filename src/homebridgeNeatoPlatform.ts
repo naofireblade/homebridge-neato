@@ -1,7 +1,7 @@
-import {API, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service} from 'homebridge';
+import {API, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service} from "homebridge";
 import NeatoApi from "node-botvac";
-import {PLATFORM_NAME, PLUGIN_NAME} from './settings';
-import {NeatoVacuumRobotAccessory} from './accessories/NeatoVacuumRobot';
+import {PLATFORM_NAME, PLUGIN_NAME} from "./settings";
+import {NeatoVacuumRobotAccessory} from "./accessories/NeatoVacuumRobot";
 
 /**
  * HomebridgePlatform
@@ -21,7 +21,8 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 			public readonly config: PlatformConfig,
 			public readonly api: API)
 	{
-		this.api.on('didFinishLaunching', () => {
+		this.api.on("didFinishLaunching", () =>
+		{
 			this.discoverRobots();
 		});
 	}
@@ -38,12 +39,13 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 	discoverRobots()
 	{
-		let client = new NeatoApi.Client();
+		const client = new NeatoApi.Client();
 
 		try
 		{
 			// Login
-			client.authorize((this.config)['email'], (this.config)['password'], false, (error) => {
+			client.authorize((this.config)["email"], (this.config)["password"], false, (error) =>
+			{
 				if (error)
 				{
 					this.log.warn("Cannot connect to neato server. No new robots will be found and existing robots will be unresponsive.");
@@ -53,7 +55,8 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				}
 
 				// Get all robots from account
-				client.getRobots((error, robots) => {
+				client.getRobots((error, robots) =>
+				{
 					if (error)
 					{
 						this.log.error("Successful login but can't connect to your neato robot: " + error);
@@ -67,12 +70,13 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						return;
 					}
 
-					this.log.info("Neato account has " + robots.length + " robot " + (robots.length == 1 ? "" : "s"));
+					this.log.info("Neato account has " + robots.length + " robot " + (robots.length === 1 ? "" : "s"));
 
-					for (let robot of robots)
+					for (const robot of robots)
 					{
 						// Get additional information for the robot
-						robot.getState((error, state) => {
+						robot.getState((error, state) =>
+						{
 							if (error)
 							{
 								this.log.error("Error getting robot meta information: " + error + ": " + state);
