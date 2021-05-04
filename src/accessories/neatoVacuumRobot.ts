@@ -9,13 +9,8 @@ import {Options} from '../models/options';
  */
 export class NeatoVacuumRobotAccessory
 {
-	private robot: any;
+	// Homebridge
 	private log: Logger;
-	private readonly refresh: any;
-	private isSpotCleaning: boolean;
-	private readonly options: Options;
-	private timer: any;
-
 	private batteryService: Service;
 	private cleanService: Service;
 	private findMeService: Service;
@@ -28,6 +23,19 @@ export class NeatoVacuumRobotAccessory
 	private scheduleService: Service;
 	private spotCleanService: Service;
 
+	// Context
+	private robot: any;
+	private readonly options: Options;
+
+	// Config
+	private readonly backgroundUpdateInterval: number;
+	private readonly prefix: boolean;
+	private readonly availableServices: string[];
+	
+	// Transient
+	private isSpotCleaning: boolean;
+	private timer: any;
+
 	/**
 	 * These are just used to create a working example
 	 * You should implement your own code to track the state of your accessory
@@ -36,35 +44,21 @@ export class NeatoVacuumRobotAccessory
 	constructor(
 			private readonly platform: HomebridgeNeatoPlatform,
 			private readonly accessory: PlatformAccessory,
-			private readonly isNew: Boolean,
 			private readonly config: PlatformConfig)
 	{
 		this.log = platform.log;
+		
 		this.robot = accessory.context.robot;
 		this.options = accessory.context.options || new Options();
 
-		if ('refresh' in this.config && this.config['refresh'] !== 'auto')
-		{
-			// parse config parameter
-			this.refresh = parseInt(this.config['refresh']);
-			// must be integer and positive
-			this.refresh = (typeof this.refresh !== 'number' || (this.refresh % 1) !== 0 || this.refresh < 0) ? 60 : this.refresh;
-			// minimum 60s to save some load on the neato servers
-			if (this.refresh > 0 && this.refresh < 60)
-			{
-				this.log.warn("Minimum refresh time is 60 seconds to not overload the neato servers");
-				this.refresh = (this.refresh > 0 && this.refresh < 60) ? 60 : this.refresh;
-			}
-		}
-		else
-		{
-			this.refresh = 'auto';
-		}
-		this.debug(DebugType.STATUS, "Background update interval is: " + this.refresh);
+		this.backgroundUpdateInterval = NeatoVacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
+		this.prefix = this.config['prefix'] || PREFIX;
+		this.availableServices = this.config['services'] || SERVICES;
+		this.log.debug(JSON.stringify(this.availableServices));
 
 		this.isSpotCleaning = false;
 
-		// set accessory information
+		// Information
 		this.accessory.getService(this.platform.Service.AccessoryInformation)!
 				.setCharacteristic(this.platform.Characteristic.Manufacturer, "Neato Robotics")
 				.setCharacteristic(this.platform.Characteristic.Model, this.robot.meta.modelName)
@@ -72,9 +66,10 @@ export class NeatoVacuumRobotAccessory
 				.setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.robot.meta.firmware)
 				.setCharacteristic(this.platform.Characteristic.Name, this.robot.name);
 
+		// Identify
 		this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
 			this.robot.getState((error, result) => {
-				this.log.info(this.robot.name + " Identified");
+				this.log.info("[" + this.robot.name + "] Identified");
 				if (error)
 				{
 					this.debug(DebugType.INFO, JSON.stringify("Error: " + error));
@@ -83,18 +78,18 @@ export class NeatoVacuumRobotAccessory
 			});
 		});
 
+		// Services
+		this.cleanService = this.getSwitchService("Clean House");
+		this.spotCleanService = this.getSwitchService("Clean Spot");
+		this.goToDockService = this.getSwitchService("Go to Dock");
+		this.dockStateService = this.getOccupancyService("Docked")
+		this.binFullService = this.getOccupancyService("Bin Full")
+		this.findMeService = this.getSwitchService("Find Me");
+		this.scheduleService = this.getSwitchService("Schedule");
+		this.ecoService = this.getSwitchService("Option: Eco Mode");
+		this.noGoLinesService = this.getSwitchService("Option: NoGo Lines");
+		this.extraCareService = this.getSwitchService("Option: Extra Care");
 		this.batteryService = this.accessory.getService(this.platform.Service.Battery) || this.accessory.addService(this.platform.Service.Battery)
-
-		this.cleanService = this.getSwitchService(this.robot.name + " Clean House");
-		this.spotCleanService = this.getSwitchService(this.robot.name + " Clean Spot");
-		this.goToDockService = this.getSwitchService(this.robot.name + " Go to Dock");
-		this.dockStateService = this.getOccupancyService(this.robot.name + " Docked")
-		this.binFullService = this.getOccupancyService(this.robot.name + " Bin Full")
-		this.findMeService = this.getSwitchService(this.robot.name + " Find Me");
-		this.scheduleService = this.getSwitchService(this.robot.name + " Option: Schedule");
-		this.ecoService = this.getSwitchService(this.robot.name + " Option: Eco Mode");
-		this.noGoLinesService = this.getSwitchService(this.robot.name + " Option: NoGo Lines");
-		this.extraCareService = this.getSwitchService(this.robot.name + " Option: Extra Care");
 
 		this.cleanService.getCharacteristic(this.platform.Characteristic.On)
 				.onSet(this.setCleanHouse.bind(this))
@@ -107,7 +102,7 @@ export class NeatoVacuumRobotAccessory
 				.onGet(this.getGoToDock.bind(this));
 		this.dockStateService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
 				.onGet(this.getDocked.bind(this));
-		this.dockStateService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
+		this.binFullService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
 				.onGet(this.getBinFull.bind(this));
 		this.findMeService.getCharacteristic(this.platform.Characteristic.On)
 				.onSet(this.setFindMe.bind(this))
@@ -125,6 +120,7 @@ export class NeatoVacuumRobotAccessory
 				.onSet(this.setExtraCare.bind(this))
 				.onGet(this.getExtraCare.bind(this));
 
+		// Start background update
 		this.updateRobotPeriodically().then(() => {
 			if (!accessory.context.options)
 			{
@@ -141,14 +137,27 @@ export class NeatoVacuumRobotAccessory
 		});
 	}
 
-	private getSwitchService(servicename: string)
+	private getSwitchService(serviceName: string)
 	{
-		return this.accessory.getService(servicename) || this.accessory.addService(this.platform.Service.Switch, servicename, servicename)
+		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
+		return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName)
 	}
 
-	private getOccupancyService(servicename: string)
+	private getOccupancyService(serviceName: string)
 	{
-		return this.accessory.getService(servicename) || this.accessory.addService(this.platform.Service.OccupancySensor, servicename, servicename)
+		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
+		return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.OccupancySensor, displayName, serviceName)
+	}
+	
+	private static parseBackgroundUpdateInterval(configValue: any)
+	{
+		// Parse as number
+		let backgroundUpdateInterval = parseInt(configValue) || BACKGROUND_INTERVAL;
+		
+		// must be integer and positive
+		backgroundUpdateInterval = ((backgroundUpdateInterval % 1) !== 0 || backgroundUpdateInterval < 0) ? BACKGROUND_INTERVAL : backgroundUpdateInterval;
+		
+		return backgroundUpdateInterval;
 	}
 
 	async getCleanHouse(): Promise<CharacteristicValue>
@@ -184,7 +193,7 @@ export class NeatoVacuumRobotAccessory
 				// Start cleaning
 				else if (this.robot.canStart)
 				{
-					await this.clean(CleanType.HOUSE)
+					await this.clean(CleanType.ALL)
 				}
 				// Cannot start
 				else
@@ -422,13 +431,15 @@ export class NeatoVacuumRobotAccessory
 			this.updateRobotPeriodically();
 		}, 60 * 1000);
 
-		this.log.info("[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: " + this.options.extraCare);
+		this.log.info(
+				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: "
+				+ this.options.extraCare);
 
 		try
 		{
 			switch (cleanType)
 			{
-				case CleanType.HOUSE:
+				case CleanType.ALL:
 					await this.robot.startCleaning(this.options.eco, this.options.extraCare ? 2 : 1, this.options.noGoLines);
 					break;
 				case CleanType.SPOT:
@@ -490,10 +501,10 @@ export class NeatoVacuumRobotAccessory
 		}
 		else
 		{
-			interval = this.refresh == "auto" ? 30 : this.refresh;
+			interval = this.backgroundUpdateInterval;
 		}
-		
-		this.debug(DebugType.INFO, "Background update done. Next update in " + interval + " minute(s)" + ((this.robot.canPause) ? ", robot is currently cleaning" : ""));
+
+		this.debug(DebugType.INFO, "Background update done. Next update in " + interval + " minute" + (interval == 1 ? "" : "s") + ((this.robot.canPause) ? ", robot is currently cleaning." : "."));
 		this.timer = setTimeout(this.updateRobotPeriodically.bind(this), interval * 60 * 1000);
 	}
 
@@ -511,7 +522,7 @@ export class NeatoVacuumRobotAccessory
 
 		// Docked
 		this.dockStateService.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, await this.getDocked());
-		
+
 		// Bin full
 		this.binFullService.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, await this.getBinFull());
 
@@ -528,7 +539,7 @@ export class NeatoVacuumRobotAccessory
 		this.noGoLinesService.updateCharacteristic(this.platform.Characteristic.On, await this.getNoGoLines());
 	}
 
-	debug(debugType: DebugType, message: String)
+	private debug(debugType: DebugType, message: String)
 	{
 		switch (debugType)
 		{
@@ -547,7 +558,7 @@ export class NeatoVacuumRobotAccessory
 
 enum CleanType
 {
-	HOUSE,
+	ALL,
 	SPOT
 }
 
@@ -557,3 +568,21 @@ enum DebugType
 	STATUS,
 	INFO
 }
+
+enum Action
+{
+	CLEAN_HOUSE = "CLEAN_HOUSE",
+	CLEAN_SPOT = "CLEAN_SPOT",
+	GO_TO_DOCK = "GO_TO_DOCK",
+	DOCKED = "DOCKED",
+	BIN_FULL = "BIN_FULL",
+	FIND_ME = "FIND_ME",
+	SCHEDULE = "SCHEDULE",
+	ECO = "ECO",
+	NOGO_LINES = "NOGO_LINES",
+	EXTRA_CARE = "EXTRA_CARE"
+}
+
+const BACKGROUND_INTERVAL = 30;
+const PREFIX = false;
+const SERVICES = Object.values(Action);

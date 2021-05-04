@@ -67,7 +67,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						return;
 					}
 
-					this.log.debug("Neato account has " + robots.length + " robot " + (robots.length == 1 ? "" : "s"));
+					this.log.info("Neato account has " + robots.length + " robot " + (robots.length == 1 ? "" : "s"));
 
 					for (let robot of robots)
 					{
@@ -95,7 +95,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 									existingAccessory.context.robot = robot;
 									this.api.updatePlatformAccessories([existingAccessory]);
 
-									new NeatoVacuumRobotAccessory(this, existingAccessory, false, this.config);
+									new NeatoVacuumRobotAccessory(this, existingAccessory, this.config);
 								}
 								else
 								{
@@ -103,7 +103,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 									const accessory = new this.api.platformAccessory(robot.name, uuid);
 
 									accessory.context.robot = robot;
-									new NeatoVacuumRobotAccessory(this, accessory, true, this.config);
+									new NeatoVacuumRobotAccessory(this, accessory, this.config);
 
 									// link the accessory to your platform
 									this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
