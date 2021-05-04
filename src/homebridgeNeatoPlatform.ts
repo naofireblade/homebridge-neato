@@ -21,8 +21,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 			public readonly config: PlatformConfig,
 			public readonly api: API)
 	{
-		this.api.on("didFinishLaunching", () =>
-		{
+		this.api.on("didFinishLaunching", () => {
 			this.discoverRobots();
 		});
 	}
@@ -44,8 +43,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		try
 		{
 			// Login
-			client.authorize((this.config)["email"], (this.config)["password"], false, (error) =>
-			{
+			client.authorize((this.config)["email"], (this.config)["password"], false, (error) => {
 				if (error)
 				{
 					this.log.warn("Cannot connect to neato server. No new robots will be found and existing robots will be unresponsive.");
@@ -55,8 +53,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				}
 
 				// Get all robots from account
-				client.getRobots((error, robots) =>
-				{
+				client.getRobots((error, robots) => {
 					if (error)
 					{
 						this.log.error("Successful login but can't connect to your neato robot: " + error);
@@ -75,52 +72,52 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 					for (const robot of robots)
 					{
 						// Get additional information for the robot
-						robot.getState((error, state) =>
-						{
+						robot.getState((error, state) => {
 							if (error)
 							{
 								this.log.error("Error getting robot meta information: " + error + ": " + state);
-								return;
 							}
-
-							try
+							else
 							{
-								robot.meta = state.meta;
-
-								const uuid = this.api.hap.uuid.generate(robot._serial);
-								const existingAccessory = this.robotAccessories.find(accessory => accessory.UUID === uuid);
-
-								// the accessory already exists
-								if (existingAccessory)
+								try
 								{
-									this.log.info("[" + robot.name + "] Robot loaded from cache");
-									// TODO update maps
+									robot.meta = state.meta;
 
-									existingAccessory.context.robot = robot;
-									this.api.updatePlatformAccessories([existingAccessory]);
+									const uuid = this.api.hap.uuid.generate(robot._serial);
+									const existingAccessory = this.robotAccessories.find(accessory => accessory.UUID === uuid);
 
-									new NeatoVacuumRobotAccessory(this, existingAccessory, this.config);
+									// the accessory already exists
+									if (existingAccessory)
+									{
+										this.log.info("[" + robot.name + "] Robot loaded from cache");
+										// TODO update maps
+
+										existingAccessory.context.robot = robot;
+										this.api.updatePlatformAccessories([existingAccessory]);
+
+										new NeatoVacuumRobotAccessory(this, existingAccessory, this.config);
+									}
+									else
+									{
+										this.log.info("[" + robot.name + "] Robot created");
+										const accessory = new this.api.platformAccessory(robot.name, uuid);
+
+										accessory.context.robot = robot;
+										new NeatoVacuumRobotAccessory(this, accessory, this.config);
+
+										// link the accessory to your platform
+										this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+										// TODO get maps
+									}
 								}
-								else
+								catch (error)
 								{
-									this.log.info("[" + robot.name + "] Robot created");
-									const accessory = new this.api.platformAccessory(robot.name, uuid);
-
-									accessory.context.robot = robot;
-									new NeatoVacuumRobotAccessory(this, accessory, this.config);
-
-									// link the accessory to your platform
-									this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-									// TODO get maps
+									this.log.error("Error creating robot accessory: " + robot.name);
+									this.log.error(error);
+									throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 								}
-							}
-							catch (error)
-							{
-								this.log.error("Error creating robot accessory: " + robot.name);
-								this.log.error(error);
-								throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-							}
 
+							}
 
 							// // Get all maps for each robot
 							// robot.getPersistentMaps((error, maps) => {
