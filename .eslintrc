@@ -10,7 +10,8 @@
     "sourceType": "module"
   },
   "ignorePatterns": [
-    "dist"
+    "dist",
+    "api.ts"
   ],
   "rules": {
     "quotes": ["warn", "double"],

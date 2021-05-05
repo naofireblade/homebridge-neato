@@ -41,7 +41,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 	discoverRobots()
 	{
 		const client = new NeatoApi.Client();
-		
+
 
 		try
 		{
@@ -57,20 +57,20 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 				// Debug robot request TODO: remove after beta
 				let that = this;
-				api.request(client._baseUrl + '/users/me/robots', null, 'GET', {Authorization: client._tokenType + client._token}, (function (error, result) {
+				api.request(client._baseUrl + "/users/me/robots", null, "GET", {Authorization: client._tokenType + client._token}, (function (error, result) {
 					result.forEach(r => {
 						r.serial = "xxx" + r.serial.length;
 						r.secret_key = "xxx" + r.secret_key.length;
 						r.mac_address = "xxx" + r.mac_address.length;
 						that.log.debug("Robot Request Result: " + JSON.stringify(r));
 					});
-					
+
 					if (error)
 					{
 						that.log.debug("Robot Request Error: " + JSON.stringify(error));
 					}
 				}));
-				
+
 				// Get all robots from account
 				client.getRobots((error, robots) => {
 					if (error)
@@ -112,7 +112,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						// Check if robot already exists as an accessory
 						const uuid = this.api.hap.uuid.generate(robot._serial);
 						const cachedRobot = this.cachedRobotAccessories.find(accessory => accessory.UUID === uuid);
-						
+
 						if (cachedRobot)
 						{
 							this.log.debug("[" + robot.name + "] Updating meta information for robot in cache.");
@@ -147,7 +147,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 									else
 									{
 										// TODO get maps
-										
+
 										const newRobot = new this.api.platformAccessory(robot.name, uuid);
 										newRobot.context.robot = robot;
 										new NeatoVacuumRobotAccessory(this, newRobot, this.config);
