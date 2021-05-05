@@ -3,8 +3,6 @@ import NeatoApi from "node-botvac";
 import {PLATFORM_NAME, PLUGIN_NAME} from "./settings";
 import {NeatoVacuumRobotAccessory} from "./accessories/NeatoVacuumRobot";
 
-const api = require("./api");
-
 /**
  * HomebridgePlatform
  * This class is the main constructor for your plugin, this is where you should
@@ -55,22 +53,6 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 					return;
 				}
 
-				// Debug robot request TODO: remove after beta
-				let that = this;
-				api.request(client._baseUrl + "/users/me/robots", null, "GET", {Authorization: client._tokenType + client._token}, (function (error, result) {
-					result.forEach(r => {
-						r.serial = "xxx" + r.serial.length;
-						r.secret_key = "xxx" + r.secret_key.length;
-						r.mac_address = "xxx" + r.mac_address.length;
-						that.log.debug("Robot Request Result: " + JSON.stringify(r));
-					});
-
-					if (error)
-					{
-						that.log.debug("Robot Request Error: " + JSON.stringify(error));
-					}
-				}));
-
 				// Get all robots from account
 				client.getRobots((error, robots) => {
 					if (error)
@@ -115,17 +97,17 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 						if (cachedRobot)
 						{
-							this.log.debug("[" + robot.name + "] Updating meta information for robot in cache.");
+							this.log.debug("[" + robot.name + "] Connecting to cached robot and updating information.");
 						}
 						else
 						{
-							this.log.debug("[" + robot.name + "] Getting meta information for new robot.");
+							this.log.debug("[" + robot.name + "] Connecting to new robot and updating information.");
 						}
 
 						robot.getState((error, state) => {
 							if (error)
 							{
-								this.log.error("[" + robot.name + "] Error getting meta information. Is the robot connected to the internet? Error: " + error + ". State: " + state);
+								this.log.error("[" + robot.name + "] Cannot connect to robot. Is the robot connected to the internet? Error: " + error + ". State: " + state);
 							}
 							else
 							{
@@ -141,7 +123,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 										cachedRobot.context.robot = robot;
 										this.api.updatePlatformAccessories([cachedRobot]);
 										new NeatoVacuumRobotAccessory(this, cachedRobot, this.config);
-										this.log.info("[" + robot.name + "] Successfully loaded from cache");
+										this.log.info("[" + robot.name + "] Successfully loaded robot from cache");
 									}
 									// Create new robot accessory
 									else
