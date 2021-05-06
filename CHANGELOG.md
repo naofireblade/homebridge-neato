@@ -121,10 +121,11 @@
 ## 0.7.3
 * Fixed warnings since homebridge 1.3.0
 
-## 1.0.0-beta.1
+## 1.0.0-beta.4
 * Added bin full sensor
 * Added config-ui support for all options
 * Added config parameter **prefix** to use robot name as prefix for service names
+* Retrying mechanism if a robot is not available on homebridge launch
 * Changed service names to not include robot name as prefix by default
 * Changed background update to use better default intervals (1 minute while cleaning, 30 minutes while idle)
 * Changed config parameter **refresh**. Renamed to **backgroundUpdate**, unit changed to minute and will only be used during idle
@@ -136,4 +137,3 @@
 ## TODO until 1.0.0 release
 * Room cleaning
 * Spot size
-* Retrying when no connection

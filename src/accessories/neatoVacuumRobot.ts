@@ -67,6 +67,8 @@ export class NeatoVacuumRobotAccessory
 
 		// Identify
 		this.accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+			this.robot.findMe();
+
 			this.robot.getState((error, result) => {
 				this.log.info("[" + this.robot.name + "] Identified");
 				if (error)
@@ -329,7 +331,7 @@ export class NeatoVacuumRobotAccessory
 				{
 					this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, false);
 				}
-			}, 1000);
+			}, 10000);
 
 			try
 			{

@@ -36,10 +36,11 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		this.cachedRobotAccessories.push(accessory);
 	}
 
+	
 	discoverRobots()
 	{
 		const client = new NeatoApi.Client();
-
+		this.log.debug("blub");
 
 		try
 		{
@@ -47,9 +48,12 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 			client.authorize((this.config)["email"], (this.config)["password"], false, (error) => {
 				if (error)
 				{
-					this.log.warn("Cannot connect to neato server. No new robots will be found and existing robots will be unresponsive.");
-					this.log.warn(error);
-					// TODO retry after x min
+					this.log.error("Cannot connect to neato server. No new robots will be found and existing robots will be unresponsive. Retrying in 5 minutes.");
+					this.log.error("Error: " + error);
+
+					setTimeout(() => {
+						this.discoverRobots();
+					}, 5 * 60 * 1000);
 					return;
 				}
 
@@ -57,8 +61,12 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				client.getRobots((error, robots) => {
 					if (error)
 					{
-						this.log.error("Successful login but can't list your neato robots. Error: " + error);
-						// TODO retry after x min
+						this.log.error("Successful login but can't list the robots in your neato robots. Retrying in 5 minutes.");
+						this.log.error("Error: " + error);
+
+						setTimeout(() => {
+							this.discoverRobots();
+						}, 5 * 60 * 1000);
 						return;
 					}
 
@@ -107,7 +115,11 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						robot.getState((error, state) => {
 							if (error)
 							{
-								this.log.error("[" + robot.name + "] Cannot connect to robot. Is the robot connected to the internet? Error: " + error + ". State: " + state);
+								this.log.error("[" + robot.name + "] Cannot connect to robot. Is the robot connected to the internet? Retrying in 5 minutes.");
+								this.log.error("Error: " + error);
+								setTimeout(() => {
+									this.discoverRobots();
+								}, 5 * 60 * 1000);
 							}
 							else
 							{
