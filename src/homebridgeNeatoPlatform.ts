@@ -40,7 +40,6 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 	discoverRobots()
 	{
 		const client = new NeatoApi.Client();
-		this.log.debug("blub");
 
 		try
 		{
@@ -126,6 +125,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 								try
 								{
 									robot.meta = state.meta;
+									robot.availableServices = state.availableServices;
 
 									// Update existing robot accessor
 									if (cachedRobot)

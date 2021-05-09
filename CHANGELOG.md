@@ -132,8 +132,7 @@
 * Changed config parameter **hidden**. Renamed to **services**, now takes list of services that should be _visible_. Default are all available services.
 * Fixed robots no longer disappear or change the room after connection issues with the Neato API
 * Fixed plugin no longer crashes if non smart robot is assigned in neato account
-* Fixed options for eco, nogo lines, extra care are now saved in homebridge and will no longer be overridden by Neato API
+* Fixed options for eco, nogo lines, extra care, spot repeat, spot size are now saved in homebridge and will no longer be overridden by Neato API
 
 ## TODO until 1.0.0 release
 * Room cleaning
-* Spot size

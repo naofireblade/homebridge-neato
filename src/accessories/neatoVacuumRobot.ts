@@ -1,6 +1,10 @@
 import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
+import spotRepeat from '../characteristics/spotRepeat';
+import spotWidth from '../characteristics/spotWidth';
+import spotHeight from '../characteristics/spotHeight';
 import {Options} from '../models/options';
+import {CharacteristicGetHandler, CharacteristicSetHandler} from "hap-nodejs/dist/lib/Characteristic";
 
 /**
  * Platform Accessory
@@ -22,6 +26,7 @@ export class NeatoVacuumRobotAccessory
 	private readonly extraCareService: Service | null;
 	private readonly scheduleService: Service | null;
 	private readonly spotCleanService: Service | null;
+	private spotPlusFeatures: boolean;
 
 	// Context
 	private robot: any;
@@ -50,6 +55,7 @@ export class NeatoVacuumRobotAccessory
 
 		this.robot = accessory.context.robot;
 		this.options = accessory.context.options || new Options();
+		this.spotPlusFeatures = false;
 
 		this.backgroundUpdateInterval = NeatoVacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
 		this.prefix = this.config['prefix'] || PREFIX;
@@ -82,75 +88,22 @@ export class NeatoVacuumRobotAccessory
 		});
 
 		// Services
-		this.cleanService = this.getSwitchService(RobotService.CLEAN_HOUSE);
-		this.spotCleanService = this.getSwitchService(RobotService.CLEAN_SPOT);
-		this.goToDockService = this.getSwitchService(RobotService.GO_TO_DOCK);
-		this.dockStateService = this.getOccupancyService(RobotService.DOCKED)
-		this.binFullService = this.getOccupancyService(RobotService.BIN_FULL)
-		this.findMeService = this.getSwitchService(RobotService.FIND_ME);
-		this.scheduleService = this.getSwitchService(RobotService.SCHEDULE);
-		this.ecoService = this.getSwitchService(RobotService.ECO);
-		this.noGoLinesService = this.getSwitchService(RobotService.NOGO_LINES);
-		this.extraCareService = this.getSwitchService(RobotService.EXTRA_CARE);
+		this.cleanService = this.getSwitchService(RobotService.CLEAN_HOUSE, this.getCleanHouse.bind(this), this.setCleanHouse.bind(this));
+		this.spotCleanService = this.getSwitchService(RobotService.CLEAN_SPOT, this.getSpotClean.bind(this), this.setSpotClean.bind(this));
+		this.goToDockService = this.getSwitchService(RobotService.GO_TO_DOCK, this.getGoToDock.bind(this), this.setGoToDock.bind(this));
+		this.dockStateService = this.getOccupancyService(RobotService.DOCKED, this.getDocked.bind(this))
+		this.binFullService = this.getOccupancyService(RobotService.BIN_FULL, this.getBinFull.bind(this))
+		this.findMeService = this.getSwitchService(RobotService.FIND_ME, this.getFindMe.bind(this), this.setFindMe.bind(this));
+		this.scheduleService = this.getSwitchService(RobotService.SCHEDULE, this.getSchedule.bind(this), this.setSchedule.bind(this));
+		this.ecoService = this.getSwitchService(RobotService.ECO, this.getEco.bind(this), this.setEco.bind(this));
+		this.noGoLinesService = this.getSwitchService(RobotService.NOGO_LINES, this.getNoGoLines.bind(this), this.setNoGoLines.bind(this));
+		this.extraCareService = this.getSwitchService(RobotService.EXTRA_CARE, this.getExtraCare.bind(this), this.setExtraCare.bind(this));
 		this.batteryService = this.accessory.getService(this.platform.Service.Battery) || this.accessory.addService(this.platform.Service.Battery)
 
+		// This should be the main switch if the accessory is grouped in homekit
 		if (this.cleanService)
 		{
-			this.cleanService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setCleanHouse.bind(this))
-					.onGet(this.getCleanHouse.bind(this));
-		}
-		if (this.spotCleanService)
-		{
-			this.spotCleanService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setSpotClean.bind(this))
-					.onGet(this.getSpotClean.bind(this));
-		}
-		if (this.goToDockService)
-		{
-			this.goToDockService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setGoToDock.bind(this))
-					.onGet(this.getGoToDock.bind(this));
-		}
-		if (this.dockStateService)
-		{
-			this.dockStateService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
-					.onGet(this.getDocked.bind(this));
-		}
-		if (this.binFullService)
-		{
-			this.binFullService.getCharacteristic(this.platform.Characteristic.OccupancyDetected)
-					.onGet(this.getBinFull.bind(this));
-		}
-		if (this.findMeService)
-		{
-			this.findMeService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setFindMe.bind(this))
-					.onGet(this.getFindMe.bind(this));
-		}
-		if (this.scheduleService)
-		{
-			this.scheduleService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setSchedule.bind(this))
-					.onGet(this.getSchedule.bind(this));
-		}
-		if (this.ecoService)
-		{
-			this.ecoService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setEco.bind(this))
-					.onGet(this.getEco.bind(this));
-		}
-		if (this.noGoLinesService)
-		{
-			this.noGoLinesService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setNoGoLines.bind(this))
-					.onGet(this.getNoGoLines.bind(this));
-		}
-		if (this.extraCareService)
-		{
-			this.extraCareService.getCharacteristic(this.platform.Characteristic.On)
-					.onSet(this.setExtraCare.bind(this))
-					.onGet(this.getExtraCare.bind(this));
+			this.cleanService.setPrimaryService(true);
 		}
 
 		// Start background update
@@ -162,6 +115,10 @@ export class NeatoVacuumRobotAccessory
 				this.options.extraCare = this.robot.navigationMode == 2;
 				this.debug(DebugType.INFO, "Options initially set to eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: " + this.options.extraCare);
 				accessory.context.options = this.options;
+
+				// Add special characteristics to set spot cleaning options
+				this.spotPlusFeatures = ((typeof this.robot.availableServices.spotCleaning !== 'undefined') && this.robot.availableServices.spotCleaning.includes("basic"));
+				this.addSpotCleanCharacteristics();
 			}
 			else
 			{
@@ -170,31 +127,43 @@ export class NeatoVacuumRobotAccessory
 		});
 	}
 
-	private getSwitchService(serviceName: string)
+	private addSpotCleanCharacteristics()
 	{
-		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
+		// Only add characteristics of service is available ond characteristics are not added yet
+		if (this.spotCleanService != null && !this.options.spotCharacteristics)
+		{
+			this.spotCleanService.addCharacteristic(spotRepeat(this.platform.Characteristic))
+					.onGet(this.getSpotRepeat.bind(this))
+					.onSet(this.setSpotRepeat.bind(this));
 
-		if (this.availableServices.includes(serviceName))
-		{
-			return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName);
-		}
-		else
-		{
-			if (this.accessory.getService(displayName))
+			// Add these only if the robot supports them
+			if (this.spotPlusFeatures)
 			{
-				this.accessory.removeService(<Service>this.accessory.getService(displayName));
+				this.spotCleanService.addCharacteristic(spotWidth(this.platform.Characteristic))
+						.onGet(this.getSpotWidth.bind(this))
+						.onSet(this.setSpotWidth.bind(this));
+				this.spotCleanService.addCharacteristic(spotHeight(this.platform.Characteristic))
+						.onGet(this.getSpotHeight.bind(this))
+						.onSet(this.setSpotHeight.bind(this));
 			}
-			return null;
+			this.options.spotCharacteristics = true;
+		}
+		else if (this.spotCleanService == null)
+		{
+			this.options.spotCharacteristics = false;
 		}
 	}
 
-	private getOccupancyService(serviceName: string)
+	private getSwitchService(serviceName: string, getHandler: CharacteristicGetHandler, setHandler: CharacteristicSetHandler)
 	{
 		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
-
 		if (this.availableServices.includes(serviceName))
 		{
-			return this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.OccupancySensor, displayName, serviceName);
+			let service = this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName);
+			service.getCharacteristic(this.platform.Characteristic.On)
+					.onGet(getHandler)
+					.onSet(setHandler);
+			return service;
 		}
 		else
 		{
@@ -202,7 +171,28 @@ export class NeatoVacuumRobotAccessory
 			{
 				this.accessory.removeService(<Service>this.accessory.getService(displayName));
 			}
-			return null;
+			return null
+		}
+	}
+
+	private getOccupancyService(serviceName: string, getHandler: CharacteristicGetHandler)
+	{
+		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
+
+		if (this.availableServices.includes(serviceName))
+		{
+			let service = this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.OccupancySensor, displayName, serviceName);
+			service.getCharacteristic(this.platform.Characteristic.OccupancyDetected.OccupancyDetected)
+					.onGet(getHandler);
+			return service;
+		}
+		else
+		{
+			if (this.accessory.getService(displayName))
+			{
+				this.accessory.removeService(<Service>this.accessory.getService(displayName));
+			}
+			return null
 		}
 	}
 
@@ -457,6 +447,39 @@ export class NeatoVacuumRobotAccessory
 		this.options.noGoLines = <boolean>on;
 	}
 
+	getSpotRepeat()
+	{
+		return this.options.spotRepeat;
+	}
+
+	setSpotRepeat(on: CharacteristicValue)
+	{
+		this.debug(DebugType.STATUS, "Set SPOT REPEAT: " + on);
+		this.options.spotRepeat = <boolean>on;
+	}
+
+	getSpotWidth()
+	{
+		return this.options.spotWidth;
+	}
+
+	setSpotWidth(length: CharacteristicValue)
+	{
+		this.debug(DebugType.STATUS, "Set SPOT WIDTH: " + length + " cm");
+		this.options.spotWidth = <number>length;
+	}
+
+	getSpotHeight()
+	{
+		return this.options.spotHeight;
+	}
+
+	setSpotHeight(length: CharacteristicValue)
+	{
+		this.debug(DebugType.STATUS, "Set SPOT HEIGHT: " + length + " cm");
+		this.options.spotHeight = <number>length;
+	}
+
 	getFindMe()
 	{
 		return false;
@@ -492,7 +515,7 @@ export class NeatoVacuumRobotAccessory
 		// Enable shorter background update while cleaning
 		setTimeout(() => {
 			this.updateRobotPeriodically();
-		}, 60 * 1000);
+		}, 2 * 60 * 1000);
 
 		this.log.info(
 				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: "
@@ -506,7 +529,7 @@ export class NeatoVacuumRobotAccessory
 					await this.robot.startCleaning(this.options.eco, this.options.extraCare ? 2 : 1, this.options.noGoLines);
 					break;
 				case CleanType.SPOT:
-					await this.robot.startSpotCleaning(this.options.eco, this.options.spot.width, this.options.spot.height, this.options.spot.repeat, this.options.extraCare ? 2 : 1);
+					await this.robot.startSpotCleaning(this.options.eco, this.options.spotWidth, this.options.spotHeight, this.options.spotRepeat, this.options.extraCare ? 2 : 1);
 					break;
 			}
 		}
