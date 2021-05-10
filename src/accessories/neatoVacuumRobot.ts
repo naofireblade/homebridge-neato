@@ -108,6 +108,11 @@ export class NeatoVacuumRobotAccessory
 
 		// Start background update
 		this.updateRobotPeriodically().then(() => {
+			// Add special characteristics to set spot cleaning options
+			this.spotPlusFeatures = ((typeof this.robot.availableServices.spotCleaning !== 'undefined') && this.robot.availableServices.spotCleaning.includes("basic"));
+			this.addSpotCleanCharacteristics();
+
+			// Save/Load options
 			if (!accessory.context.options)
 			{
 				this.options.eco = this.robot.eco;
@@ -115,10 +120,6 @@ export class NeatoVacuumRobotAccessory
 				this.options.extraCare = this.robot.navigationMode == 2;
 				this.debug(DebugType.INFO, "Options initially set to eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: " + this.options.extraCare);
 				accessory.context.options = this.options;
-
-				// Add special characteristics to set spot cleaning options
-				this.spotPlusFeatures = ((typeof this.robot.availableServices.spotCleaning !== 'undefined') && this.robot.availableServices.spotCleaning.includes("basic"));
-				this.addSpotCleanCharacteristics();
 			}
 			else
 			{
