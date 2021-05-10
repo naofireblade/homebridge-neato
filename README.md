@@ -98,3 +98,4 @@ Many thanks go to
 - [Berkay](https://github.com/btutal) for adding the schema file to use the plugin with homebridge-config-ui-x
 - [Antoine de Maleprade](https://github.com/az0uz) for adding the zone cleaning feature
 - [DJay](https://github.com/DJay-X) for testing out tons of new beta versions
+- [Luis R.](https://github.com/himbeles) for adding multi-language support and adding the languages german and french.
