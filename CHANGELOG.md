@@ -121,9 +121,10 @@
 ## 0.7.3
 * Fixed warnings since homebridge 1.3.0
 
-## 1.0.0-beta.4
+## 1.0.0
 * Added bin full sensor
 * Added config-ui support for all options
+* Added multi language support
 * Added config parameter **prefix** to use robot name as prefix for service names
 * Retrying mechanism if a robot is not available on homebridge launch
 * Changed service names to not include robot name as prefix by default

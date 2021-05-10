@@ -21,7 +21,7 @@ const localizationDicts = {
         "battery": "Battery"
     },
     'de': {
-        "clean": "Sauge",
+        "clean": "Saugen",
         "cleanZone": "Sauge Zone",
         "cleanThe": "Sauge",
         "goToDock": "Zur Basis",
@@ -29,10 +29,10 @@ const localizationDicts = {
         "binFull": "Behälter voll",
         "eco": "Eco Modus",
         "noGoLines": "NoGo Linien",
-        "extraCare": "Extra Care",
+        "extraCare": "Extra Vorsicht",
         "schedule": "Zeitplan",
         "findMe": "Finde mich",
-        "cleanSpot": "Spot Reinigung",
+        "cleanSpot": "Sauge Bereich",
         "battery": "Batterie"
     },
     'fr': {

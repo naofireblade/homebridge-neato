@@ -18,8 +18,8 @@
         "required": true
       },
       "language": {
-        "title": "Services Language",
-        "description": "The displayed language of the registered services (and associated Siri commands)",
+        "title": "Language",
+        "description": "The language of the plugin services (and associated Siri commands)",
         "type": "string",
         "default": "en",
         "oneOf": [
@@ -46,7 +46,7 @@
       },
       "backgroundUpdate": {
         "title": "Background Update Interval",
-        "description": "Interval for background updates while the robot is not cleaning (in minutes). During cleaning, the robot will automatically update at a faster rate.",
+        "description": "The interval for background updates while the robot is not cleaning (in minutes). During cleaning, the robot will automatically update at a faster rate.",
         "type": "integer",
         "minimum": 1,
         "default": 30
@@ -125,10 +125,9 @@
       "type": "help",
       "helpvalue": "<h4>Options</h4>"
     },
+    "language",
     "backgroundUpdate",
     "prefix",
-    "language",
-
     {
       "type": "fieldset",
       "title": "Displayed Services",
