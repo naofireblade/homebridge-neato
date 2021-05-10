@@ -17,14 +17,35 @@
         "type": "string",
         "required": true
       },
+      "language": {
+        "title": "Services Language",
+        "description": "The displayed language of the registered services (and associated Siri commands)",
+        "type": "string",
+        "default": "en",
+        "oneOf": [
+          {
+            "title": "English",
+            "enum": ["en"]
+          },
+          {
+            "title": "German",
+            "enum": ["de"]
+          },
+          {
+            "title": "French",
+            "enum": ["fr"]
+          }
+        ],
+        "required": true
+      },
       "prefix": {
-        "title": "Prefix robot name",
+        "title": "Prefix with Robot Name",
         "description": "Display the name of the robot in front of every service.",
         "type": "boolean",
         "default": false
       },
       "backgroundUpdate": {
-        "title": "Background update",
+        "title": "Background Update Interval",
         "description": "Interval for background updates while the robot is not cleaning (in minutes). During cleaning, the robot will automatically update at a faster rate.",
         "type": "integer",
         "minimum": 1,
@@ -32,32 +53,53 @@
       },
       "services": {
         "type": "array",
+        "title": "Displayed Services",
+        "description": "The services to be made available for Homekit",
+        "uniqueItems": true,
         "items": {
           "type": "string",
           "enum": [
-            "Clean house",
-            "Clean spot",
-            "Go to dock",
-            "Find me",
+            "clean",
+            "cleanZone",
+            "cleanSpot",
+            "goToDock",
+            "dockState",
+            "binFull",
+            "eco",
+            "noGoLines",
+            "extraCare",
+            "schedule",
+            "findMe",
+            "battery"
+          ],
+          "enumNames": [
+            "Clean",
+            "Clean Zone",
+            "Clean Spot",
+            "Go to Dock",
+            "Docked State",
+            "Bin Full",
+            "Eco Mode",
+            "NoGo Lines",
+            "Extra Care",
             "Schedule",
-            "Eco",
-            "Nogo lines",
-            "Extra care",
-            "Docked sensor",
-            "Bin full sensor"
+            "Find me",
+            "Battery"
           ]
         },
         "default": [
-          "Clean house",
-          "Clean spot",
-          "Go to dock",
-          "Find me",
-          "Schedule",
-          "Eco",
-          "Nogo lines",
-          "Extra care",
-          "Docked sensor",
-          "Bin full sensor"
+          "clean",
+          "cleanZone",
+          "goToDock",
+          "dockState",
+          "binFull",
+          "eco",
+          "noGoLines",
+          "extraCare",
+          "schedule",
+          "findMe",
+          "cleanSpot",
+          "battery"
         ]
       }
     }
@@ -88,9 +130,11 @@
     },
     "backgroundUpdate",
     "prefix",
+    "language",
+
     {
       "type": "fieldset",
-      "title": "Services",
+      "title": "Displayed Services",
       "description": "<i>Services to be displayed in Homekit</i>",
       "expandable": true,
       "items": [
