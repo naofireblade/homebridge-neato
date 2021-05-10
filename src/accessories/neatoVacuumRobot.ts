@@ -1,13 +1,13 @@
-import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID, CharacteristicGetHandler, CharacteristicSetHandler, Characteristic} from 'homebridge';
+import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
 import spotRepeat from '../characteristics/spotRepeat';
 import spotWidth from '../characteristics/spotWidth';
 import spotHeight from '../characteristics/spotHeight';
 import {Options} from '../models/options';
-import { RobotService, CleanType } from '../models/services';
-import { ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX } from '../defaults';
-import { availableLocales, localize } from '../localization';
-import { CharacteristicHandler } from '../characteristics/characteristicHandler';
+import {CleanType, RobotService} from '../models/services';
+import {ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX} from '../defaults';
+import {availableLocales, localize} from '../localization';
+import {CharacteristicHandler} from '../characteristics/characteristicHandler';
 
 /**
  * Platform Accessory
@@ -92,75 +92,54 @@ export class NeatoVacuumRobotAccessory
 			});
 		});
 
-		[
-			this.getClean,
-			this.setClean,
-			this.getSpotClean, 
-			this.setSpotClean,
-			this.getGoToDock,
-			this.setGoToDock,
-			this.getDocked,
-			this.getBinFull,
-			this.getFindMe,
-			this.setFindMe,
-			this.getSchedule,
-			this.setSchedule,
-			this.getEco, 
-			this.setEco,
-			this.getNoGoLines,
-			this.setNoGoLines,
-			this.getExtraCare,
-			this.setExtraCare
-		].forEach((f)=>f.bind(this))
-
 		// Services
 		this.cleanService = this.registerService(RobotService.CLEAN, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getClean,
-			setCharacteristicHandler: this.setClean
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getClean.bind(this),
+			setCharacteristicHandler: this.setClean.bind(this)
 		}]);
 		this.spotCleanService = this.registerService(RobotService.CLEAN_SPOT, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getSpotClean,
-			setCharacteristicHandler: this.setSpotClean
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getSpotClean.bind(this),
+			setCharacteristicHandler: this.setSpotClean.bind(this)
 		}]);
 		this.goToDockService = this.registerService(RobotService.GO_TO_DOCK, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getGoToDock,
-			setCharacteristicHandler: this.setGoToDock
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getGoToDock.bind(this),
+			setCharacteristicHandler: this.setGoToDock.bind(this)
 		}]);
 		this.dockStateService = this.registerService(RobotService.DOCKED, this.platform.Service.OccupancySensor, [{
-			characteristic: this.platform.Characteristic.OccupancyDetected.OccupancyDetected, 
-			getCharacteristicHandler: this.getDocked,
+			characteristic: this.platform.Characteristic.OccupancyDetected.OccupancyDetected,
+			getCharacteristicHandler: this.getDocked.bind(this)
 		}]);
 		this.binFullService = this.registerService(RobotService.BIN_FULL, this.platform.Service.OccupancySensor, [{
-			characteristic: this.platform.Characteristic.OccupancyDetected.OccupancyDetected, 
-			getCharacteristicHandler: this.getBinFull,
+			characteristic: this.platform.Characteristic.OccupancyDetected.OccupancyDetected,
+			getCharacteristicHandler: this.getBinFull.bind(this)
 		}]);
 		this.findMeService = this.registerService(RobotService.FIND_ME, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getFindMe,
-			setCharacteristicHandler: this.setFindMe
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getFindMe.bind(this),
+			setCharacteristicHandler: this.setFindMe.bind(this)
 		}]);
 		this.scheduleService = this.registerService(RobotService.SCHEDULE, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getSchedule,
-			setCharacteristicHandler: this.setSchedule
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getSchedule.bind(this),
+			setCharacteristicHandler: this.setSchedule.bind(this)
 		}]);
 		this.ecoService = this.registerService(RobotService.ECO, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getEco,
-			setCharacteristicHandler: this.setEco
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getEco.bind(this),
+			setCharacteristicHandler: this.setEco.bind(this)
 		}]);
 		this.noGoLinesService = this.registerService(RobotService.NOGO_LINES, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getNoGoLines,
-			setCharacteristicHandler: this.setNoGoLines
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getNoGoLines.bind(this),
+			setCharacteristicHandler: this.setNoGoLines.bind(this)
 		}]);
 		this.extraCareService = this.registerService(RobotService.EXTRA_CARE, this.platform.Service.Switch, [{
-			characteristic: this.platform.Characteristic.On, 
-			getCharacteristicHandler: this.getExtraCare,
-			setCharacteristicHandler: this.setExtraCare
+			characteristic: this.platform.Characteristic.On,
+			getCharacteristicHandler: this.getExtraCare.bind(this),
+			setCharacteristicHandler: this.setExtraCare.bind(this)
 		}]);
 		this.batteryService = this.registerService(RobotService.BATTERY, this.platform.Service.Battery);
 
@@ -194,7 +173,7 @@ export class NeatoVacuumRobotAccessory
 
 	private addSpotCleanCharacteristics()
 	{
-		// Only add characteristics of service is available ond characteristics are not added yet
+		// Only add characteristics if service is available ond characteristics are not added yet
 		if (this.spotCleanService != null && !this.options.spotCharacteristics)
 		{
 			this.spotCleanService.addCharacteristic(spotRepeat(this.platform.Characteristic))
@@ -219,30 +198,38 @@ export class NeatoVacuumRobotAccessory
 		}
 	}
 
-private registerService(
-		serviceName: RobotService, 
-		serviceType: WithUUID<typeof Service>,
-		characteristicHandlers: CharacteristicHandler[] = []
-		) : Service | undefined
+	private registerService(serviceName: RobotService, serviceType: WithUUID<typeof Service>, characteristicHandlers: CharacteristicHandler[] = []): Service | undefined
 	{
 		const displayName = (this.prefix ? (this.robot.name + " ") : "") + localize(serviceName, this.locale);
-		
+
 		// query existing service by type and subtype
 		const existingService = this.accessory.getServiceById(serviceType, serviceName)
 
 		if (this.availableServices.has(serviceName))
-		{	
-			var service : Service
-			if (existingService && existingService.displayName === displayName) {
+		{
+			let service: Service;
+			if (existingService && existingService.displayName === displayName)
+			{
 				service = existingService
-			} else {
-				if (existingService) {this.accessory.removeService(existingService);} // delete to reset display name in case of locale or prefix change
+			}
+			else
+			{
+				if (existingService)
+				{
+					this.accessory.removeService(existingService);
+				} // delete to reset display name in case of locale or prefix change
 				service = this.accessory.addService(serviceType, displayName, serviceName);
 			}
 			characteristicHandlers.forEach(ch => {
-				var char = service.getCharacteristic(ch.characteristic)
-				if (ch.getCharacteristicHandler) {char.onGet(ch.getCharacteristicHandler)}
-				if (ch.setCharacteristicHandler) {char.onSet(ch.setCharacteristicHandler)}
+				let char = service.getCharacteristic(ch.characteristic);
+				if (ch.getCharacteristicHandler)
+				{
+					char.onGet(ch.getCharacteristicHandler)
+				}
+				if (ch.setCharacteristicHandler)
+				{
+					char.onSet(ch.setCharacteristicHandler)
+				}
 			});
 			return service
 		}

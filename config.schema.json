@@ -69,8 +69,7 @@
             "noGoLines",
             "extraCare",
             "schedule",
-            "findMe",
-            "battery"
+            "findMe"
           ],
           "enumNames": [
             "Clean",
@@ -83,8 +82,7 @@
             "NoGo Lines",
             "Extra Care",
             "Schedule",
-            "Find me",
-            "Battery"
+            "Find me"
           ]
         },
         "default": [
@@ -98,8 +96,7 @@
           "extraCare",
           "schedule",
           "findMe",
-          "cleanSpot",
-          "battery"
+          "cleanSpot"
         ]
       }
     }
