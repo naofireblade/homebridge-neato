@@ -1,10 +1,13 @@
-import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service} from 'homebridge';
+import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID, CharacteristicGetHandler, CharacteristicSetHandler, Characteristic} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
 import spotRepeat from '../characteristics/spotRepeat';
 import spotWidth from '../characteristics/spotWidth';
 import spotHeight from '../characteristics/spotHeight';
 import {Options} from '../models/options';
-import {CharacteristicGetHandler, CharacteristicSetHandler} from "hap-nodejs/dist/lib/Characteristic";
+import { RobotService, CleanType } from '../models/services';
+import { ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX } from '../defaults';
+import { availableLocales, localize } from '../localization';
+import { CharacteristicHandler } from '../characteristics/characteristicHandler';
 
 /**
  * Platform Accessory
@@ -15,17 +18,17 @@ export class NeatoVacuumRobotAccessory
 {
 	// Homebridge
 	private log: Logger;
-	private batteryService: Service;
-	private readonly cleanService: Service | null;
-	private readonly findMeService: Service | null;
-	private readonly goToDockService: Service | null;
-	private readonly dockStateService: Service | null;
-	private readonly binFullService: Service | null;
-	private readonly ecoService: Service | null;
-	private readonly noGoLinesService: Service | null;
-	private readonly extraCareService: Service | null;
-	private readonly scheduleService: Service | null;
-	private readonly spotCleanService: Service | null;
+	private readonly batteryService?: Service;
+	private readonly cleanService?: Service;
+	private readonly findMeService?: Service;
+	private readonly goToDockService?: Service;
+	private readonly dockStateService?: Service;
+	private readonly binFullService?: Service;
+	private readonly ecoService?: Service;
+	private readonly noGoLinesService?: Service;
+	private readonly extraCareService?: Service;
+	private readonly scheduleService?: Service;
+	private readonly spotCleanService?: Service;
 	private spotPlusFeatures: boolean;
 
 	// Context
@@ -34,8 +37,9 @@ export class NeatoVacuumRobotAccessory
 
 	// Config
 	private readonly backgroundUpdateInterval: number;
+	private readonly locale: availableLocales;
 	private readonly prefix: boolean;
-	private readonly availableServices: string[];
+	private readonly availableServices: Set<RobotService>;
 
 	// Transient
 	private isSpotCleaning: boolean;
@@ -59,7 +63,8 @@ export class NeatoVacuumRobotAccessory
 
 		this.backgroundUpdateInterval = NeatoVacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
 		this.prefix = this.config['prefix'] || PREFIX;
-		this.availableServices = this.config['services'] || SERVICES;
+		this.locale = this.config['language'] || LOCALE;
+		this.availableServices = new Set(this.config['services']) || ALL_SERVICES;
 
 		this.isSpotCleaning = false;
 
@@ -87,18 +92,77 @@ export class NeatoVacuumRobotAccessory
 			});
 		});
 
+		[
+			this.getClean,
+			this.setClean,
+			this.getSpotClean, 
+			this.setSpotClean,
+			this.getGoToDock,
+			this.setGoToDock,
+			this.getDocked,
+			this.getBinFull,
+			this.getFindMe,
+			this.setFindMe,
+			this.getSchedule,
+			this.setSchedule,
+			this.getEco, 
+			this.setEco,
+			this.getNoGoLines,
+			this.setNoGoLines,
+			this.getExtraCare,
+			this.setExtraCare
+		].forEach((f)=>f.bind(this))
+
 		// Services
-		this.cleanService = this.getSwitchService(RobotService.CLEAN_HOUSE, this.getCleanHouse.bind(this), this.setCleanHouse.bind(this));
-		this.spotCleanService = this.getSwitchService(RobotService.CLEAN_SPOT, this.getSpotClean.bind(this), this.setSpotClean.bind(this));
-		this.goToDockService = this.getSwitchService(RobotService.GO_TO_DOCK, this.getGoToDock.bind(this), this.setGoToDock.bind(this));
-		this.dockStateService = this.getOccupancyService(RobotService.DOCKED, this.getDocked.bind(this))
-		this.binFullService = this.getOccupancyService(RobotService.BIN_FULL, this.getBinFull.bind(this))
-		this.findMeService = this.getSwitchService(RobotService.FIND_ME, this.getFindMe.bind(this), this.setFindMe.bind(this));
-		this.scheduleService = this.getSwitchService(RobotService.SCHEDULE, this.getSchedule.bind(this), this.setSchedule.bind(this));
-		this.ecoService = this.getSwitchService(RobotService.ECO, this.getEco.bind(this), this.setEco.bind(this));
-		this.noGoLinesService = this.getSwitchService(RobotService.NOGO_LINES, this.getNoGoLines.bind(this), this.setNoGoLines.bind(this));
-		this.extraCareService = this.getSwitchService(RobotService.EXTRA_CARE, this.getExtraCare.bind(this), this.setExtraCare.bind(this));
-		this.batteryService = this.accessory.getService(this.platform.Service.Battery) || this.accessory.addService(this.platform.Service.Battery)
+		this.cleanService = this.registerService(RobotService.CLEAN, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getClean,
+			setCharacteristicHandler: this.setClean
+		}]);
+		this.spotCleanService = this.registerService(RobotService.CLEAN_SPOT, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getSpotClean,
+			setCharacteristicHandler: this.setSpotClean
+		}]);
+		this.goToDockService = this.registerService(RobotService.GO_TO_DOCK, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getGoToDock,
+			setCharacteristicHandler: this.setGoToDock
+		}]);
+		this.dockStateService = this.registerService(RobotService.DOCKED, this.platform.Service.OccupancySensor, [{
+			characteristic: this.platform.Characteristic.OccupancyDetected.OccupancyDetected, 
+			getCharacteristicHandler: this.getDocked,
+		}]);
+		this.binFullService = this.registerService(RobotService.BIN_FULL, this.platform.Service.OccupancySensor, [{
+			characteristic: this.platform.Characteristic.OccupancyDetected.OccupancyDetected, 
+			getCharacteristicHandler: this.getBinFull,
+		}]);
+		this.findMeService = this.registerService(RobotService.FIND_ME, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getFindMe,
+			setCharacteristicHandler: this.setFindMe
+		}]);
+		this.scheduleService = this.registerService(RobotService.SCHEDULE, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getSchedule,
+			setCharacteristicHandler: this.setSchedule
+		}]);
+		this.ecoService = this.registerService(RobotService.ECO, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getEco,
+			setCharacteristicHandler: this.setEco
+		}]);
+		this.noGoLinesService = this.registerService(RobotService.NOGO_LINES, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getNoGoLines,
+			setCharacteristicHandler: this.setNoGoLines
+		}]);
+		this.extraCareService = this.registerService(RobotService.EXTRA_CARE, this.platform.Service.Switch, [{
+			characteristic: this.platform.Characteristic.On, 
+			getCharacteristicHandler: this.getExtraCare,
+			setCharacteristicHandler: this.setExtraCare
+		}]);
+		this.batteryService = this.registerService(RobotService.BATTERY, this.platform.Service.Battery);
 
 		// This should be the main switch if the accessory is grouped in homekit
 		if (this.cleanService)
@@ -155,45 +219,39 @@ export class NeatoVacuumRobotAccessory
 		}
 	}
 
-	private getSwitchService(serviceName: string, getHandler: CharacteristicGetHandler, setHandler: CharacteristicSetHandler)
+private registerService(
+		serviceName: RobotService, 
+		serviceType: WithUUID<typeof Service>,
+		characteristicHandlers: CharacteristicHandler[] = []
+		) : Service | undefined
 	{
-		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
-		if (this.availableServices.includes(serviceName))
-		{
-			let service = this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.Switch, displayName, serviceName);
-			service.getCharacteristic(this.platform.Characteristic.On)
-					.onGet(getHandler)
-					.onSet(setHandler);
-			return service;
+		const displayName = (this.prefix ? (this.robot.name + " ") : "") + localize(serviceName, this.locale);
+		
+		// query existing service by type and subtype
+		const existingService = this.accessory.getServiceById(serviceType, serviceName)
+
+		if (this.availableServices.has(serviceName))
+		{	
+			var service : Service
+			if (existingService && existingService.displayName === displayName) {
+				service = existingService
+			} else {
+				if (existingService) {this.accessory.removeService(existingService);} // delete to reset display name in case of locale or prefix change
+				service = this.accessory.addService(serviceType, displayName, serviceName);
+			}
+			characteristicHandlers.forEach(ch => {
+				var char = service.getCharacteristic(ch.characteristic)
+				if (ch.getCharacteristicHandler) {char.onGet(ch.getCharacteristicHandler)}
+				if (ch.setCharacteristicHandler) {char.onSet(ch.setCharacteristicHandler)}
+			});
+			return service
 		}
 		else
 		{
-			if (this.accessory.getService(displayName))
+			if (existingService)
 			{
-				this.accessory.removeService(<Service>this.accessory.getService(displayName));
+				this.accessory.removeService(existingService);
 			}
-			return null
-		}
-	}
-
-	private getOccupancyService(serviceName: string, getHandler: CharacteristicGetHandler)
-	{
-		let displayName = this.prefix ? this.robot.name + serviceName : serviceName;
-
-		if (this.availableServices.includes(serviceName))
-		{
-			let service = this.accessory.getService(displayName) || this.accessory.addService(this.platform.Service.OccupancySensor, displayName, serviceName);
-			service.getCharacteristic(this.platform.Characteristic.OccupancyDetected.OccupancyDetected)
-					.onGet(getHandler);
-			return service;
-		}
-		else
-		{
-			if (this.accessory.getService(displayName))
-			{
-				this.accessory.removeService(<Service>this.accessory.getService(displayName));
-			}
-			return null
 		}
 	}
 
@@ -208,7 +266,7 @@ export class NeatoVacuumRobotAccessory
 		return backgroundUpdateInterval;
 	}
 
-	async getCleanHouse(): Promise<CharacteristicValue>
+	async getClean(): Promise<CharacteristicValue>
 	{
 		try
 		{
@@ -222,7 +280,7 @@ export class NeatoVacuumRobotAccessory
 		}
 	}
 
-	async setCleanHouse(on: CharacteristicValue)
+	async setClean(on: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set CLEAN HOUSE: " + on);
 		try
@@ -552,8 +610,8 @@ export class NeatoVacuumRobotAccessory
 					this.isSpotCleaning = result != null && result.action == 2;
 
 					// Battery
-					this.batteryService.updateCharacteristic(this.platform.Characteristic.BatteryLevel, this.robot.charge);
-					this.batteryService.updateCharacteristic(this.platform.Characteristic.ChargingState, this.robot.isCharging);
+					this.batteryService?.updateCharacteristic(this.platform.Characteristic.BatteryLevel, this.robot.charge);
+					this.batteryService?.updateCharacteristic(this.platform.Characteristic.ChargingState, this.robot.isCharging);
 				});
 			}
 			catch (error)
@@ -599,7 +657,7 @@ export class NeatoVacuumRobotAccessory
 	{
 		if (this.cleanService)
 		{
-			this.cleanService.updateCharacteristic(this.platform.Characteristic.On, await this.getCleanHouse());
+			this.cleanService.updateCharacteristic(this.platform.Characteristic.On, await this.getClean());
 		}
 		if (this.spotCleanService)
 		{
@@ -640,11 +698,6 @@ export class NeatoVacuumRobotAccessory
 	}
 }
 
-enum CleanType
-{
-	ALL,
-	SPOT
-}
 
 enum DebugType
 {
@@ -652,21 +705,3 @@ enum DebugType
 	STATUS,
 	INFO
 }
-
-enum RobotService
-{
-	CLEAN_HOUSE = "Clean house",
-	CLEAN_SPOT = "Clean spot",
-	GO_TO_DOCK = "Go to dock",
-	DOCKED = "Docked sensor",
-	BIN_FULL = "Bin full sensor",
-	FIND_ME = "Find me",
-	SCHEDULE = "Schedule",
-	ECO = "Eco",
-	NOGO_LINES = "Nogo lines",
-	EXTRA_CARE = "Extra care"
-}
-
-const BACKGROUND_INTERVAL = 30;
-const PREFIX = false;
-const SERVICES = Object.values(RobotService);
