@@ -9,11 +9,6 @@ import {ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX} from '../defaults';
 import {availableLocales, localize} from '../localization';
 import {CharacteristicHandler} from '../characteristics/characteristicHandler';
 
-/**
- * Platform Accessory
- * An instance of this class is created for each accessory your platform registers
- * Each accessory may expose multiple services of different service types.
- */
 export class NeatoVacuumRobotAccessory
 {
 	// Homebridge
@@ -44,11 +39,6 @@ export class NeatoVacuumRobotAccessory
 	// Transient
 	private isSpotCleaning: boolean;
 	private timer: any;
-
-	/**
-	 * These are just used to create a working example
-	 * You should implement your own code to track the state of your accessory
-	 */
 
 	constructor(
 			private readonly platform: HomebridgeNeatoPlatform,
@@ -216,19 +206,20 @@ export class NeatoVacuumRobotAccessory
 			{
 				if (existingService)
 				{
+					// delete to reset display name in case of locale or prefix change
 					this.accessory.removeService(existingService);
-				} // delete to reset display name in case of locale or prefix change
+				}
 				service = this.accessory.addService(serviceType, displayName, serviceName);
 			}
-			characteristicHandlers.forEach(ch => {
-				let char = service.getCharacteristic(ch.characteristic);
-				if (ch.getCharacteristicHandler)
+			characteristicHandlers.forEach(handlers => {
+				let characteristic = service.getCharacteristic(handlers.characteristic);
+				if (handlers.getCharacteristicHandler)
 				{
-					char.onGet(ch.getCharacteristicHandler)
+					characteristic.onGet(handlers.getCharacteristicHandler)
 				}
-				if (ch.setCharacteristicHandler)
+				if (handlers.setCharacteristicHandler)
 				{
-					char.onSet(ch.setCharacteristicHandler)
+					characteristic.onSet(handlers.setCharacteristicHandler)
 				}
 			});
 			return service
@@ -684,7 +675,6 @@ export class NeatoVacuumRobotAccessory
 		}
 	}
 }
-
 
 enum DebugType
 {
