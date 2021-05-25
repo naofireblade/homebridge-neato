@@ -170,6 +170,55 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				else
 				{
 					// TODO get maps
+					try
+					{
+						await new Promise((resolve, reject) => {
+							robot.getPersistentMaps((err, data) => {
+								if (err) return reject(err)
+								resolve(data)
+							})
+						}).then(data => {
+							robot.maps = data;
+							this.log.info("[" + robot.name + "] has " + robot.maps + " saved map" + (robot.maps.length === 1 ? "." : "s."));
+						});
+					}
+					catch (error)
+					{
+						this.log.error("[" + robot.name + "] Error loading maps from robot.");
+						this.log.error("Error: " + error);
+						continue;
+					}
+
+					for (const floorplan of robot.maps)
+					{
+						this.log.debug("[" + robot.name + "] Found floorplan " + floorplan.name);
+
+						// Get Boundaries for each map
+						try
+						{
+							await new Promise((resolve, reject) => {
+								robot.getMapBoundaries(floorplan.id, (err, data) => {
+									if (err) return reject(err)
+									resolve(data)
+								})
+							}).then((data: any) => {
+								floorplan.boundaries = data['boundaries'];
+								for (const room of floorplan.boundaries)
+								{
+									if (room.type === "polygon")
+									{
+										this.log.info("[" + robot.name + "] Found room " + room.name + ". Not adding in current beta.");
+										// TODO Add room accessory
+									}
+								}
+							});
+						}
+						catch (error)
+						{
+							this.log.error("[" + robot.name + "] Error loading boundary for map #" + floorplan.id);
+							this.log.error("Error: " + error);
+						}
+					}
 
 					const newRobot = new this.api.platformAccessory(robot.name, uuid);
 					newRobot.context.robot = robot;
