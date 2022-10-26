@@ -54,7 +54,6 @@
       "services": {
         "type": "array",
         "title": "Displayed Services",
-        "description": "The services to be made available for Homekit",
         "uniqueItems": true,
         "items": {
           "type": "string",

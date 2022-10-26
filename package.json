@@ -1,7 +1,7 @@
 {
   "name": "homebridge-neato",
   "displayName": "Homebridge Neato",
-  "version": "1.0.0-beta.7",
+  "version": "1.0.0-beta.8",
   "description": "A Neato vacuum robot plugin for homebridge.",
   "license": "MIT",
   "keywords": [

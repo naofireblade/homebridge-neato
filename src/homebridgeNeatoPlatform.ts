@@ -2,6 +2,7 @@ import {API, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, P
 import NeatoApi from "node-botvac";
 import {PLATFORM_NAME, PLUGIN_NAME} from "./settings";
 import {NeatoVacuumRobotAccessory} from "./accessories/NeatoVacuumRobot";
+import {NeatoRoomAccessory} from "./accessories/Room";
 
 /**
  * HomebridgePlatform
@@ -96,39 +97,55 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		}
 
 		// Count Neato robots in cache
-		this.log.debug("Plugin Cache has " + this.cachedRobotAccessories.length + " robot" + (this.cachedRobotAccessories.length === 1 ? "" : "s"));
+		let robotSize = this.cachedRobotAccessories.filter(r => r.context.room === undefined).length;
+		let roomSize = this.cachedRobotAccessories.filter(r => r.context.room !== undefined).length;
+		this.log.debug("Plugin cache has " + robotSize + " robot" + (robotSize === 1 ? "" : "s") + " and " + roomSize + " room" + (roomSize === 1 ? "." : "s."));
 
-		// Look for cached robot in neato account
-		for (let cachedRobot of this.cachedRobotAccessories)
-		{
-			let accountRobot = robots.find(robot => this.api.hap.uuid.generate(robot._serial) === cachedRobot.UUID);
-			if (accountRobot)
-			{
-				this.log.debug("[" + cachedRobot.displayName + "] Cached robot found in Neato account.");
-			}
-			else
-			{
-				this.log.error("[" + cachedRobot.displayName + "] Cached robot not found in Neato account. Robot will now be removed from homebridge.");
-				this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedRobot]);
-			}
-		}
-
-		// Add / Update homebridge accessories with robot information from neato. This must be done for new and existing robots to reflect changes in the name, firmware, pluginconfig etc.
+		// Look for all account robots in cache
 		for (let robot of robots)
 		{
-			// Check if robot already exists as an accessory
-			const uuid = this.api.hap.uuid.generate(robot._serial);
-			const cachedRobot = this.cachedRobotAccessories.find(accessory => accessory.UUID === uuid);
-			let state;
-
+			let uuid = this.api.hap.uuid.generate(robot._serial);
+			let cachedRobot = this.cachedRobotAccessories.find(r => uuid === r.UUID);
 			if (cachedRobot)
 			{
-				this.log.debug("[" + robot.name + "] Connecting to cached robot and updating information.");
+				cachedRobot.context.found = true;
 			}
-			else
-			{
-				this.log.debug("[" + robot.name + "] Connecting to new robot and updating information.");
-			}
+			// }
+
+
+
+
+			// // Look for cached robot in neato account
+			// for (let cachedRobot of this.cachedRobotAccessories.filter(r => r.context.room === null))
+			// {
+			// 	let accountRobot = robots.find(robot => this.api.hap.uuid.generate(robot._serial) === cachedRobot.UUID);
+			// 	if (accountRobot)
+			// 	{
+			// 		this.log.debug("[" + cachedRobot.displayName + "] Cached robot found in Neato account.");
+			// 	}
+			// 	else
+			// 	{
+			// 		this.log.error("[" + cachedRobot.displayName + "] Cached robot not found in Neato account. Robot will now be removed from homebridge cache.");
+			// 		this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedRobot]);
+			// 	}
+			// }
+
+			// // Add / Update homebridge accessories with robot information from neato. This must be done for new and existing robots to reflect changes in the name, firmware, pluginconfig etc.
+			// for (let robot of robots)
+			// {
+			// 	// Check if robot already exists as an accessory
+			// 	const uuid = this.api.hap.uuid.generate(robot._serial);
+			// 	const cachedRobot = this.cachedRobotAccessories.find(accessory => accessory.UUID === uuid);
+				let state;
+			//
+			// 	if (cachedRobot)
+			// 	{
+			// 		this.log.debug("[" + robot.name + "] Connecting to cached robot and updating information.");
+			// 	}
+			// 	else
+			// 	{
+			// 		this.log.debug("[" + robot.name + "] Connecting to new robot and updating information.");
+			// 	}
 
 			try
 			{
@@ -156,75 +173,38 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				robot.meta = state.meta;
 				robot.availableServices = state.availableServices;
 
-				// Update existing robot accessor
+				// Update existing robot accessory
 				if (cachedRobot)
 				{
-					// TODO update maps
+					this.log.info("[" + robot.name + "] Loaded robot " + robot.name + " from cache.");
+					
+					await this.loadFloorplans(robot);
+
+					for (const floorplan of robot.maps)
+					{
+						await this.loadRooms(robot, floorplan)
+					}
 
 					cachedRobot.context.robot = robot;
 					this.api.updatePlatformAccessories([cachedRobot]);
 					new NeatoVacuumRobotAccessory(this, cachedRobot, this.config);
-					this.log.info("[" + robot.name + "] Successfully loaded robot from cache");
+					this.log.info("[" + robot.name + "] Updated robot " + robot.name + " from neato account.");
 				}
 				// Create new robot accessory
 				else
 				{
-					// TODO get maps
-					try
-					{
-						await new Promise((resolve, reject) => {
-							robot.getPersistentMaps((err, data) => {
-								if (err) return reject(err)
-								resolve(data)
-							})
-						}).then(data => {
-							robot.maps = data;
-							this.log.info("[" + robot.name + "] has " + robot.maps + " saved map" + (robot.maps.length === 1 ? "." : "s."));
-						});
-					}
-					catch (error)
-					{
-						this.log.error("[" + robot.name + "] Error loading maps from robot.");
-						this.log.error("Error: " + error);
-						continue;
-					}
+					await this.loadFloorplans(robot);
 
 					for (const floorplan of robot.maps)
 					{
-						this.log.debug("[" + robot.name + "] Found floorplan " + floorplan.name);
-
-						// Get Boundaries for each map
-						try
-						{
-							await new Promise((resolve, reject) => {
-								robot.getMapBoundaries(floorplan.id, (err, data) => {
-									if (err) return reject(err)
-									resolve(data)
-								})
-							}).then((data: any) => {
-								floorplan.boundaries = data['boundaries'];
-								for (const room of floorplan.boundaries)
-								{
-									if (room.type === "polygon")
-									{
-										this.log.info("[" + robot.name + "] Found room " + room.name + ". Not adding in current beta.");
-										// TODO Add room accessory
-									}
-								}
-							});
-						}
-						catch (error)
-						{
-							this.log.error("[" + robot.name + "] Error loading boundary for map #" + floorplan.id);
-							this.log.error("Error: " + error);
-						}
+						await this.loadRooms(robot, floorplan)
 					}
 
 					const newRobot = new this.api.platformAccessory(robot.name, uuid);
 					newRobot.context.robot = robot;
 					new NeatoVacuumRobotAccessory(this, newRobot, this.config);
 					this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRobot]);
-					this.log.info("[" + robot.name + "] Successfully created as new robot");
+					this.log.info("[" + robot.name + "] Added new robot from neato account.");
 				}
 			}
 			catch (error)
@@ -232,9 +212,28 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				this.log.error("[" + robot.name + "] Creating accessory failed. Error: " + error);
 				throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 			}
+
 		}
 
-		// // Get all maps for each robot
+		// delete all not found cached accessories;
+		for (let i = this.cachedRobotAccessories.length - 1; i >= 0; --i) {
+			let accessory = this.cachedRobotAccessories[i];
+			if (!accessory.context.found)
+			{
+				if (accessory.context.room === undefined)
+				{
+					this.log.error("[" + accessory.displayName + "] Cached robot not found in neato account, deleting from cache.");
+				}
+				else
+				{
+					this.log.error("[" + accessory.displayName + "] Cached room not found in neato account, deleting from cache.");
+				}
+				this.cachedRobotAccessories.splice(i,1);
+			}
+		}
+
+
+				// // Get all maps for each robot
 		// robot.getPersistentMaps((error, maps) => {
 		// 	if (error)
 		// 	{
@@ -284,5 +283,82 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		// 		});
 		// 	}
 		// });
+	}
+
+	async loadFloorplans(robot)
+	{
+		try
+		{
+			await new Promise((resolve, reject) => {
+				robot.getPersistentMaps((err, data) => {
+					if (err) return reject(err)
+					resolve(data)
+				})
+			}).then(data => {
+				robot.maps = data;
+			});
+		}
+		catch (error)
+		{
+			this.log.error("[" + robot.name + "] Error loading floorplans from robot.");
+			this.log.error("Error: " + error);
+		}
+	}
+
+	async loadRooms(robot, floorplan)
+	{
+		this.log.debug("[" + robot.name + "] Found floorplan " + floorplan.name + ".");
+
+		// Get Boundaries for each map
+		try
+		{
+			await new Promise((resolve, reject) => {
+				robot.getMapBoundaries(floorplan.id, (err, data) => {
+					if (err) return reject(err)
+					resolve(data)
+				})
+			}).then((data: any) => {
+				floorplan.boundaries = data['boundaries'];
+				floorplan.boundaries.push({
+					id: "098F6BCD4621D373CADE4E832627B4F6",
+					name: "Test room 1",
+					type: "polyline",
+					enabled: true
+				});
+				floorplan.boundaries.push({
+					id: "098F6BCD4621D373CAAA4E832627B4F6",
+					name: "Test room 2",
+					type: "polyline",
+					enabled: true
+				});
+				this.log.debug("[" + robot.name + "] Found " + floorplan.boundaries.length + " room" + (floorplan.boundaries.length === 1 ? "" : "s") + " in floorplan " + floorplan.boundaries + ".");
+				for (const room of floorplan.boundaries)
+				{
+					if (room.type === "polyline")
+					{
+						let uuid = this.api.hap.uuid.generate(room.id);
+						let cachedRoom = this.cachedRobotAccessories.find(r => uuid === r.UUID);
+						if (cachedRoom)
+						{
+							cachedRoom.context.found = true;
+							this.log.info("[" + robot.name + "] Found room " + room.name + " in cache.");
+						}
+						else
+						{
+							const newRoom = new this.api.platformAccessory(room.name, uuid);
+							newRoom.context.room = room;
+							new NeatoRoomAccessory(this, newRoom, this.config);
+							this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRoom]);
+							this.log.info("[" + robot.name + "] Added room " + room.name + ".");
+						}
+					}
+				}
+			});
+		}
+		catch (error)
+		{
+			this.log.error("[" + robot.name + "] Error loading rooms for floorplan #" + floorplan.id);
+			this.log.error("Error: " + error);
+		}
 	}
 }

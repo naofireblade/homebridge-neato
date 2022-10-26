@@ -1,4 +1,4 @@
-import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID} from 'homebridge';
+import {Characteristic, CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
 import spotRepeat from '../characteristics/spotRepeat';
 import spotWidth from '../characteristics/spotWidth';
@@ -28,6 +28,7 @@ export class NeatoVacuumRobotAccessory
 
 	// Context
 	private robot: any;
+	private found: boolean;
 	private readonly options: Options;
 
 	// Config
@@ -48,6 +49,7 @@ export class NeatoVacuumRobotAccessory
 		this.log = platform.log;
 
 		this.robot = accessory.context.robot;
+		this.found = accessory.context.found;
 		this.options = accessory.context.options || new Options();
 		this.spotPlusFeatures = false;
 
@@ -288,15 +290,7 @@ export class NeatoVacuumRobotAccessory
 			// Stop
 			else
 			{
-				if (this.robot.canPause)
-				{
-					this.debug(DebugType.ACTION, "Pause cleaning");
-					await this.robot.pauseCleaning();
-				}
-				else
-				{
-					this.debug(DebugType.INFO, "Already paused");
-				}
+				await this.pause();
 			}
 		}
 		catch (error)
@@ -331,7 +325,7 @@ export class NeatoVacuumRobotAccessory
 			}
 			else
 			{
-				// TODO stop/pause
+				await this.pause();
 			}
 		}
 		catch (error)
@@ -544,6 +538,19 @@ export class NeatoVacuumRobotAccessory
 				this.log.error(this.robot.name + " ## Cannot start find me. " + error);
 				throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 			}
+		}
+	}
+	
+	async pause()
+	{
+		if (this.robot.canPause)
+		{
+			this.debug(DebugType.ACTION, "Pause cleaning");
+			await this.robot.pauseCleaning();
+		}
+		else
+		{
+			this.debug(DebugType.INFO, "Already paused");
 		}
 	}
 
