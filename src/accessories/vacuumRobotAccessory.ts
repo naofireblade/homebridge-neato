@@ -8,11 +8,11 @@ import {CleanType, RobotService} from '../models/services';
 import {ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX} from '../defaults';
 import {availableLocales, localize} from '../localization';
 import {CharacteristicHandler} from '../characteristics/characteristicHandler';
+import {AbstractRobot} from "./abstractRobot";
 
-export class NeatoVacuumRobotAccessory
+export class VacuumRobotAccessory extends AbstractRobot
 {
 	// Homebridge
-	private log: Logger;
 	private readonly batteryService?: Service;
 	private readonly cleanService?: Service;
 	private readonly findMeService?: Service;
@@ -33,9 +33,6 @@ export class NeatoVacuumRobotAccessory
 
 	// Config
 	private readonly backgroundUpdateInterval: number;
-	private readonly locale: availableLocales;
-	private readonly prefix: boolean;
-	private readonly availableServices: Set<RobotService>;
 
 	// Transient
 	private isSpotCleaning: boolean;
@@ -46,17 +43,14 @@ export class NeatoVacuumRobotAccessory
 			private readonly accessory: PlatformAccessory,
 			private readonly config: PlatformConfig)
 	{
-		this.log = platform.log;
+		super(platform, accessory, config);
 
 		this.robot = accessory.context.robot;
 		this.found = accessory.context.found;
 		this.options = accessory.context.options || new Options();
 		this.spotPlusFeatures = false;
 
-		this.backgroundUpdateInterval = NeatoVacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
-		this.prefix = this.config['prefix'] || PREFIX;
-		this.locale = this.config['language'] || LOCALE;
-		this.availableServices = new Set(this.config['services']) || ALL_SERVICES;
+		this.backgroundUpdateInterval = VacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
 
 		this.isSpotCleaning = false;
 
@@ -187,51 +181,6 @@ export class NeatoVacuumRobotAccessory
 		else if (this.spotCleanService == null)
 		{
 			this.options.spotCharacteristics = false;
-		}
-	}
-
-	private registerService(serviceName: RobotService, serviceType: WithUUID<typeof Service>, characteristicHandlers: CharacteristicHandler[] = []): Service | undefined
-	{
-		const displayName = (this.prefix ? (this.robot.name + " ") : "") + localize(serviceName, this.locale);
-
-		// query existing service by type and subtype
-		const existingService = this.accessory.getServiceById(serviceType, serviceName)
-
-		if (this.availableServices.has(serviceName))
-		{
-			let service: Service;
-			if (existingService && existingService.displayName === displayName)
-			{
-				service = existingService
-			}
-			else
-			{
-				if (existingService)
-				{
-					// delete to reset display name in case of locale or prefix change
-					this.accessory.removeService(existingService);
-				}
-				service = this.accessory.addService(serviceType, displayName, serviceName);
-			}
-			characteristicHandlers.forEach(handlers => {
-				let characteristic = service.getCharacteristic(handlers.characteristic);
-				if (handlers.getCharacteristicHandler)
-				{
-					characteristic.onGet(handlers.getCharacteristicHandler)
-				}
-				if (handlers.setCharacteristicHandler)
-				{
-					characteristic.onSet(handlers.setCharacteristicHandler)
-				}
-			});
-			return service
-		}
-		else
-		{
-			if (existingService)
-			{
-				this.accessory.removeService(existingService);
-			}
 		}
 	}
 
@@ -541,72 +490,6 @@ export class NeatoVacuumRobotAccessory
 		}
 	}
 	
-	async pause()
-	{
-		if (this.robot.canPause)
-		{
-			this.debug(DebugType.ACTION, "Pause cleaning");
-			await this.robot.pauseCleaning();
-		}
-		else
-		{
-			this.debug(DebugType.INFO, "Already paused");
-		}
-	}
-
-	async clean(cleanType: CleanType)
-	{
-		// Enable shorter background update while cleaning
-		setTimeout(() => {
-			this.updateRobotPeriodically();
-		}, 2 * 60 * 1000);
-
-		this.log.info(
-				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: "
-				+ this.options.extraCare);
-
-		try
-		{
-			switch (cleanType)
-			{
-				case CleanType.ALL:
-					await this.robot.startCleaning(this.options.eco, this.options.extraCare ? 2 : 1, this.options.noGoLines);
-					break;
-				case CleanType.SPOT:
-					await this.robot.startSpotCleaning(this.options.eco, this.options.spotWidth, this.options.spotHeight, this.options.spotRepeat, this.options.extraCare ? 2 : 1);
-					break;
-			}
-		}
-		catch (error)
-		{
-			this.log.error("Cannot start cleaning. " + error);
-		}
-	}
-
-	async updateRobot()
-	{
-		// Data is outdated
-		if (typeof (this.robot.lastUpdate) === 'undefined' || new Date().getTime() - this.robot.lastUpdate > 2000)
-		{
-			this.robot.lastUpdate = new Date().getTime();
-			try
-			{
-				this.robot.getState((error, result) => {
-					this.isSpotCleaning = result != null && result.action == 2;
-
-					// Battery
-					this.batteryService?.updateCharacteristic(this.platform.Characteristic.BatteryLevel, this.robot.charge);
-					this.batteryService?.updateCharacteristic(this.platform.Characteristic.ChargingState, this.robot.isCharging);
-				});
-			}
-			catch (error)
-			{
-				this.log.error("Cannot update robot " + this.robot.name + ". Check if robot is online. " + error);
-				return false;
-			}
-		}
-	}
-
 	async updateRobotPeriodically()
 	{
 		this.debug(DebugType.INFO, "Performing background update")
@@ -634,7 +517,7 @@ export class NeatoVacuumRobotAccessory
 			interval = this.backgroundUpdateInterval;
 		}
 
-		this.debug(DebugType.INFO, "Background update done. Next update in " + interval + " minute" + (interval == 1 ? "" : "s") + ((this.robot.canPause) ? ", robot is currently cleaning." : "."));
+		this.debug(DebugType.INFO, "Background update done, next update in " + interval + " minute" + (interval == 1 ? "" : "s") + ((this.robot.canPause) ? ". Robot is currently cleaning." : ".") + " Battery is " + this.robot.charge + "%.");
 		this.timer = setTimeout(this.updateRobotPeriodically.bind(this), interval * 60 * 1000);
 	}
 

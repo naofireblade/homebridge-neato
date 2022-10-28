@@ -1,8 +1,8 @@
 import {API, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service} from "homebridge";
 import NeatoApi from "node-botvac";
 import {PLATFORM_NAME, PLUGIN_NAME} from "./settings";
-import {NeatoVacuumRobotAccessory} from "./accessories/NeatoVacuumRobot";
-import {NeatoRoomAccessory} from "./accessories/Room";
+import {VacuumRobotAccessory} from "./accessories/vacuumRobotAccessory";
+import {RoomRobotAccessory} from "./accessories/roomRobotAccessory";
 
 /**
  * HomebridgePlatform
@@ -104,48 +104,15 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		// Look for all account robots in cache
 		for (let robot of robots)
 		{
+			this.log.debug("[" + robot.name + "] Found robot.");
 			let uuid = this.api.hap.uuid.generate(robot._serial);
 			let cachedRobot = this.cachedRobotAccessories.find(r => uuid === r.UUID);
 			if (cachedRobot)
 			{
 				cachedRobot.context.found = true;
 			}
-			// }
 
-
-
-
-			// // Look for cached robot in neato account
-			// for (let cachedRobot of this.cachedRobotAccessories.filter(r => r.context.room === null))
-			// {
-			// 	let accountRobot = robots.find(robot => this.api.hap.uuid.generate(robot._serial) === cachedRobot.UUID);
-			// 	if (accountRobot)
-			// 	{
-			// 		this.log.debug("[" + cachedRobot.displayName + "] Cached robot found in Neato account.");
-			// 	}
-			// 	else
-			// 	{
-			// 		this.log.error("[" + cachedRobot.displayName + "] Cached robot not found in Neato account. Robot will now be removed from homebridge cache.");
-			// 		this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedRobot]);
-			// 	}
-			// }
-
-			// // Add / Update homebridge accessories with robot information from neato. This must be done for new and existing robots to reflect changes in the name, firmware, pluginconfig etc.
-			// for (let robot of robots)
-			// {
-			// 	// Check if robot already exists as an accessory
-			// 	const uuid = this.api.hap.uuid.generate(robot._serial);
-			// 	const cachedRobot = this.cachedRobotAccessories.find(accessory => accessory.UUID === uuid);
-				let state;
-			//
-			// 	if (cachedRobot)
-			// 	{
-			// 		this.log.debug("[" + robot.name + "] Connecting to cached robot and updating information.");
-			// 	}
-			// 	else
-			// 	{
-			// 		this.log.debug("[" + robot.name + "] Connecting to new robot and updating information.");
-			// 	}
+			let state;
 
 			try
 			{
@@ -177,7 +144,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				if (cachedRobot)
 				{
 					this.log.info("[" + robot.name + "] Loaded robot " + robot.name + " from cache.");
-					
+
 					await this.loadFloorplans(robot);
 
 					for (const floorplan of robot.maps)
@@ -187,7 +154,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 					cachedRobot.context.robot = robot;
 					this.api.updatePlatformAccessories([cachedRobot]);
-					new NeatoVacuumRobotAccessory(this, cachedRobot, this.config);
+					new VacuumRobotAccessory(this, cachedRobot, this.config);
 					this.log.info("[" + robot.name + "] Updated robot " + robot.name + " from neato account.");
 				}
 				// Create new robot accessory
@@ -202,7 +169,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 					const newRobot = new this.api.platformAccessory(robot.name, uuid);
 					newRobot.context.robot = robot;
-					new NeatoVacuumRobotAccessory(this, newRobot, this.config);
+					new VacuumRobotAccessory(this, newRobot, this.config);
 					this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRobot]);
 					this.log.info("[" + robot.name + "] Added new robot from neato account.");
 				}
@@ -216,7 +183,8 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		}
 
 		// delete all not found cached accessories;
-		for (let i = this.cachedRobotAccessories.length - 1; i >= 0; --i) {
+		for (let i = this.cachedRobotAccessories.length - 1; i >= 0; --i)
+		{
 			let accessory = this.cachedRobotAccessories[i];
 			if (!accessory.context.found)
 			{
@@ -228,12 +196,12 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				{
 					this.log.error("[" + accessory.displayName + "] Cached room not found in neato account, deleting from cache.");
 				}
-				this.cachedRobotAccessories.splice(i,1);
+				this.cachedRobotAccessories.splice(i, 1);
 			}
 		}
 
 
-				// // Get all maps for each robot
+		// // Get all maps for each robot
 		// robot.getPersistentMaps((error, maps) => {
 		// 	if (error)
 		// 	{
@@ -307,7 +275,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 	async loadRooms(robot, floorplan)
 	{
-		this.log.debug("[" + robot.name + "] Found floorplan " + floorplan.name + ".");
+		this.log.debug("[" + robot.name + "] Found floorplan " + floorplan.name.trim() + ".");
 
 		// Get Boundaries for each map
 		try
@@ -322,42 +290,40 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				floorplan.boundaries.push({
 					id: "098F6BCD4621D373CADE4E832627B4F6",
 					name: "Test room 1",
-					type: "polyline",
+					type: "polygon",
 					enabled: true
 				});
 				floorplan.boundaries.push({
 					id: "098F6BCD4621D373CAAA4E832627B4F6",
 					name: "Test room 2",
-					type: "polyline",
+					type: "polygon",
 					enabled: true
 				});
-				this.log.debug("[" + robot.name + "] Found " + floorplan.boundaries.length + " room" + (floorplan.boundaries.length === 1 ? "" : "s") + " in floorplan " + floorplan.boundaries + ".");
-				for (const room of floorplan.boundaries)
+				let rooms = floorplan.boundaries.filter(r => r.type === "polygon");
+				this.log.debug("[" + robot.name + "] Found " + rooms.length + " room" + (rooms.length === 1 ? "" : "s") + " in floorplan " + floorplan.name.trim() + ".");
+				for (const room of rooms)
 				{
-					if (room.type === "polyline")
+					let uuid = this.api.hap.uuid.generate(room.id);
+					let cachedRoom = this.cachedRobotAccessories.find(r => uuid === r.UUID);
+					if (cachedRoom)
 					{
-						let uuid = this.api.hap.uuid.generate(room.id);
-						let cachedRoom = this.cachedRobotAccessories.find(r => uuid === r.UUID);
-						if (cachedRoom)
-						{
-							cachedRoom.context.found = true;
-							this.log.info("[" + robot.name + "] Found room " + room.name + " in cache.");
-						}
-						else
-						{
-							const newRoom = new this.api.platformAccessory(room.name, uuid);
-							newRoom.context.room = room;
-							new NeatoRoomAccessory(this, newRoom, this.config);
-							this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRoom]);
-							this.log.info("[" + robot.name + "] Added room " + room.name + ".");
-						}
+						cachedRoom.context.found = true;
+						this.log.info("[" + robot.name + "] Loaded room " + room.name + " from cache.");
+					}
+					else
+					{
+						const newRoom = new this.api.platformAccessory(room.name, uuid);
+						newRoom.context.room = room;
+						new RoomRobotAccessory(this, newRoom, this.config);
+						this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRoom]);
+						this.log.info("[" + robot.name + "] Added room " + room.name + ".");
 					}
 				}
 			});
 		}
 		catch (error)
 		{
-			this.log.error("[" + robot.name + "] Error loading rooms for floorplan #" + floorplan.id);
+			this.log.error("[" + robot.name + "] Error loading rooms for floorplan " + floorplan.name.trim());
 			this.log.error("Error: " + error);
 		}
 	}
