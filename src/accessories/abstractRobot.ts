@@ -8,10 +8,10 @@ import {ALL_SERVICES, LOCALE, PREFIX} from "../defaults";
 
 export class AbstractRobot
 {
-	protected robot: any;
-	protected log: Logger;
-	protected cleanService?: Service;
-	protected readonly refresh: any;
+	protected robot: any; // Physicial robot
+	protected log: Logger; // Homebridge Logger
+	protected cleanService?: Service; // Service for start cleaning
+	// protected readonly refresh: any; // ???
 
 	// Context
 	protected found: boolean;
@@ -27,11 +27,12 @@ export class AbstractRobot
 			protected readonly config: PlatformConfig)
 	{
 		this.log = platform.log;
+		this.robot = accessory.context.robot;
 		this.found = accessory.context.found;
 		this.prefix = this.config['prefix'] || PREFIX;
 		this.locale = this.config['language'] || LOCALE;
 		this.availableServices = new Set(this.config['services']) || ALL_SERVICES;
-
+		
 		// Information
 		this.accessory.getService(this.platform.Service.AccessoryInformation)!
 				.setCharacteristic(this.platform.Characteristic.Manufacturer, "Neato Robotics")
@@ -50,59 +51,6 @@ export class AbstractRobot
 		else
 		{
 			this.debug(DebugType.INFO, "Already paused");
-		}
-	}
-
-	protected async clean(cleanType: CleanType)
-	{
-		// Enable shorter background update while cleaning
-		setTimeout(() => {
-			this.updateRobotPeriodically();
-		}, 2 * 60 * 1000);
-
-		this.log.info(
-				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: "
-				+ this.options.extraCare);
-
-		try
-		{
-			switch (cleanType)
-			{
-				case CleanType.ALL:
-					await this.robot.startCleaning(this.options.eco, this.options.extraCare ? 2 : 1, this.options.noGoLines);
-					break;
-				case CleanType.SPOT:
-					await this.robot.startSpotCleaning(this.options.eco, this.options.spotWidth, this.options.spotHeight, this.options.spotRepeat, this.options.extraCare ? 2 : 1);
-					break;
-			}
-		}
-		catch (error)
-		{
-			this.log.error("Cannot start cleaning. " + error);
-		}
-	}
-
-	protected async updateRobot()
-	{
-		// Data is outdated
-		if (typeof (this.robot.lastUpdate) === 'undefined' || new Date().getTime() - this.robot.lastUpdate > 2000)
-		{
-			this.robot.lastUpdate = new Date().getTime();
-			try
-			{
-				this.robot.getState((error, result) => {
-					this.isSpotCleaning = result != null && result.action == 2;
-
-					// Battery
-					this.batteryService?.updateCharacteristic(this.platform.Characteristic.BatteryLevel, this.robot.charge);
-					this.batteryService?.updateCharacteristic(this.platform.Characteristic.ChargingState, this.robot.isCharging);
-				});
-			}
-			catch (error)
-			{
-				this.log.error("Cannot update robot " + this.robot.name + ". Check if robot is online. " + error);
-				return false;
-			}
 		}
 	}
 
@@ -150,4 +98,27 @@ export class AbstractRobot
 			}
 		}
 	}
+
+	protected debug(debugType: DebugType, message: String)
+	{
+		switch (debugType)
+		{
+			case DebugType.ACTION:
+				this.log.debug("[" + this.robot.name + "] > " + message);
+				break;
+			case DebugType.STATUS:
+				this.log.debug("[" + this.robot.name + "] " + message);
+				break;
+			case DebugType.INFO:
+				this.log.debug("[" + this.robot.name + "] " + message);
+				break;
+		}
+	}
+}
+
+export enum DebugType
+{
+	ACTION,
+	STATUS,
+	INFO
 }

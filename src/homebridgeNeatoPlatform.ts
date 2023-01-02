@@ -93,7 +93,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		}
 		else
 		{
-			this.log.info("Neato account has " + robots.length + " robot" + (robots.length === 1 ? "" : "s"));
+			this.log.info("Neato account has " + robots.length + " robot" + (robots.length === 1 ? "." : "s."));
 		}
 
 		// Count Neato robots in cache
@@ -155,7 +155,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 					cachedRobot.context.robot = robot;
 					this.api.updatePlatformAccessories([cachedRobot]);
 					new VacuumRobotAccessory(this, cachedRobot, this.config);
-					this.log.info("[" + robot.name + "] Updated robot " + robot.name + " from neato account.");
+					this.log.debug("[" + robot.name + "] Updated robot " + robot.name + " from neato account.");
 				}
 				// Create new robot accessory
 				else
@@ -199,58 +199,6 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				this.cachedRobotAccessories.splice(i, 1);
 			}
 		}
-
-
-		// // Get all maps for each robot
-		// robot.getPersistentMaps((error, maps) => {
-		// 	if (error)
-		// 	{
-		// 		this.log.error("Error updating persistent maps: " + error + ": " + maps);
-		// 		callback();
-		// 	}
-		// 	// Robot has no maps
-		// 	else if (maps.length === 0)
-		// 	{
-		// 		robot.maps = [];
-		// 		this.robotAccessories.push({device: robot, meta: state.meta, availableServices: state.availableServices});
-		// 		loadedRobots++;
-		// 		if (loadedRobots === robots.length)
-		// 		{
-		// 			callback();
-		// 		}
-		// 	}
-		// 	// Robot has maps
-		// 	else
-		// 	{
-		// 		robot.maps = maps;
-		// 		let loadedMaps = 0;
-		// 		robot.maps.forEach((map) => {
-		// 			// Save zones in each map
-		// 			robot.getMapBoundaries(map.id, (error, result) => {
-		// 				if (error)
-		// 				{
-		// 					this.log.error("Error getting boundaries: " + error + ": " + result)
-		// 				}
-		// 				else
-		// 				{
-		// 					map.boundaries = result.boundaries;
-		// 				}
-		// 				loadedMaps++;
-		//
-		// 				// Robot is completely requested if zones for all maps are loaded
-		// 				if (loadedMaps === robot.maps.length)
-		// 				{
-		// 					this.robotAccessories.push({device: robot, meta: state.meta, availableServices: state.availableServices});
-		// 					loadedRobots++;
-		// 					if (loadedRobots === robots.length)
-		// 					{
-		// 						callback();
-		// 					}
-		// 				}
-		// 			})
-		// 		});
-		// 	}
-		// });
 	}
 
 	async loadFloorplans(robot)
@@ -308,12 +256,17 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 					if (cachedRoom)
 					{
 						cachedRoom.context.found = true;
+						cachedRoom.context.robot = robot;
 						this.log.info("[" + robot.name + "] Loaded room " + room.name + " from cache.");
+						new RoomRobotAccessory(this, cachedRoom, this.config);
+						this.api.updatePlatformAccessories([cachedRoom]);
+						this.log.debug("[" + robot.name + "] Updated room " + room.name + " from neato account.");
 					}
 					else
 					{
 						const newRoom = new this.api.platformAccessory(room.name, uuid);
 						newRoom.context.room = room;
+						newRoom.context.robot = robot;
 						new RoomRobotAccessory(this, newRoom, this.config);
 						this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRoom]);
 						this.log.info("[" + robot.name + "] Added room " + room.name + ".");

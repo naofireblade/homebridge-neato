@@ -1,16 +1,13 @@
-import {CharacteristicValue, Logger, PlatformAccessory, PlatformConfig, Service, WithUUID} from 'homebridge';
+import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
-import {Options} from "../models/options";
-import {CleanType, RobotService} from "../models/services";
-import {CharacteristicHandler} from "../characteristics/characteristicHandler";
-import {localize} from "../localization";
-import {PREFIX} from "../defaults";
+import {RobotService} from "../models/services";
 import {AbstractRobot} from "./abstractRobot";
 
 export class RoomRobotAccessory extends AbstractRobot
 {
 	// Context
 	private room: any;
+	private isCleaning: boolean = false;
 
 	constructor(
 			platform: HomebridgeNeatoPlatform,
@@ -24,7 +21,7 @@ export class RoomRobotAccessory extends AbstractRobot
 		// Information
 		this.accessory.getService(this.platform.Service.AccessoryInformation)!
 				.setCharacteristic(this.platform.Characteristic.Name, this.room.name);
-
+		
 		// Services
 		this.cleanService = this.registerService(RobotService.CLEAN_ZONE, this.platform.Service.Switch, [{
 			characteristic: this.platform.Characteristic.On,
@@ -37,8 +34,10 @@ export class RoomRobotAccessory extends AbstractRobot
 	{
 		try
 		{
-			await this.updateRobot();
-			return this.robot.canPause;
+			// TODO check if robot is still running, if not, set this.isCleaning to false and return false
+			return false;
+			// await this.updateRobot();
+			// return this.robot.canPause;
 		}
 		catch (error)
 		{
@@ -52,27 +51,13 @@ export class RoomRobotAccessory extends AbstractRobot
 		this.log.debug("[" + this.robot.name + "] Clean room " + on ? 'start' : 'pause' + ".");
 		try
 		{
-			await this.updateRobot();
+			// await this.updateRobot();
 
 			// Start
 			if (on)
 			{
-				// Resume cleaning
-				if (this.robot.canResume)
-				{
-					this.log.debug("[" + this.robot.name + "] Resume cleaning room");
-					await this.robot.resumeCleaning();
-				}
-				// Start cleaning
-				else if (this.robot.canStart)
-				{
-					await this.clean(CleanType.ALL)
-				}
-				// Cannot start
-				else
-				{
-					this.log.debug("[" + this.robot.name + "] Cannot start cleaning room, maybe already cleaning?");
-				}
+				// TODO start or queue room cleaning
+				this.isCleaning = true;
 			}
 			// Stop
 			else

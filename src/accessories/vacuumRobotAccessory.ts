@@ -8,13 +8,12 @@ import {CleanType, RobotService} from '../models/services';
 import {ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX} from '../defaults';
 import {availableLocales, localize} from '../localization';
 import {CharacteristicHandler} from '../characteristics/characteristicHandler';
-import {AbstractRobot} from "./abstractRobot";
+import {AbstractRobot, DebugType} from "./abstractRobot";
 
 export class VacuumRobotAccessory extends AbstractRobot
 {
 	// Homebridge
 	private readonly batteryService?: Service;
-	private readonly cleanService?: Service;
 	private readonly findMeService?: Service;
 	private readonly goToDockService?: Service;
 	private readonly dockStateService?: Service;
@@ -27,8 +26,6 @@ export class VacuumRobotAccessory extends AbstractRobot
 	private spotPlusFeatures: boolean;
 
 	// Context
-	private robot: any;
-	private found: boolean;
 	private readonly options: Options;
 
 	// Config
@@ -39,27 +36,19 @@ export class VacuumRobotAccessory extends AbstractRobot
 	private timer: any;
 
 	constructor(
-			private readonly platform: HomebridgeNeatoPlatform,
-			private readonly accessory: PlatformAccessory,
-			private readonly config: PlatformConfig)
+			platform: HomebridgeNeatoPlatform,
+			accessory: PlatformAccessory,
+			config: PlatformConfig)
 	{
 		super(platform, accessory, config);
 
-		this.robot = accessory.context.robot;
-		this.found = accessory.context.found;
 		this.options = accessory.context.options || new Options();
 		this.spotPlusFeatures = false;
-
 		this.backgroundUpdateInterval = VacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
-
 		this.isSpotCleaning = false;
 
 		// Information
 		this.accessory.getService(this.platform.Service.AccessoryInformation)!
-				.setCharacteristic(this.platform.Characteristic.Manufacturer, "Neato Robotics")
-				.setCharacteristic(this.platform.Characteristic.Model, this.robot.meta.modelName)
-				.setCharacteristic(this.platform.Characteristic.SerialNumber, this.robot._serial)
-				.setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.robot.meta.firmware)
 				.setCharacteristic(this.platform.Characteristic.Name, this.robot.name);
 
 		// Identify
@@ -489,7 +478,60 @@ export class VacuumRobotAccessory extends AbstractRobot
 			}
 		}
 	}
-	
+
+	async clean(cleanType: CleanType)
+	{
+		// Enable shorter background update while cleaning
+		setTimeout(() => {
+			this.updateRobotPeriodically();
+		}, 2 * 60 * 1000);
+
+		this.log.info(
+				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: "
+				+ this.options.extraCare);
+
+		try
+		{
+			switch (cleanType)
+			{
+				case CleanType.ALL:
+					await this.robot.startCleaning(this.options.eco, this.options.extraCare ? 2 : 1, this.options.noGoLines);
+					break;
+				case CleanType.SPOT:
+					await this.robot.startSpotCleaning(this.options.eco, this.options.spotWidth, this.options.spotHeight, this.options.spotRepeat, this.options.extraCare ? 2 : 1);
+					break;
+			}
+		}
+		catch (error)
+		{
+			this.log.error("Cannot start cleaning. " + error);
+		}
+	}
+
+	async updateRobot()
+	{
+		// Data is outdated
+		if (typeof (this.robot.lastUpdate) === 'undefined' || new Date().getTime() - this.robot.lastUpdate > 2000)
+		{
+			this.robot.lastUpdate = new Date().getTime();
+			try
+			{
+				this.robot.getState((error, result) => {
+					this.isSpotCleaning = result != null && result.action == 2;
+
+					// Battery
+					this.batteryService?.updateCharacteristic(this.platform.Characteristic.BatteryLevel, this.robot.charge);
+					this.batteryService?.updateCharacteristic(this.platform.Characteristic.ChargingState, this.robot.isCharging);
+				});
+			}
+			catch (error)
+			{
+				this.log.error("Cannot update robot " + this.robot.name + ". Check if robot is online. " + error);
+				return false;
+			}
+		}
+	}
+
 	async updateRobotPeriodically()
 	{
 		this.debug(DebugType.INFO, "Performing background update")
@@ -533,7 +575,7 @@ export class VacuumRobotAccessory extends AbstractRobot
 		}
 		if (this.goToDockService)
 		{
-			this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, await this.getGoToDock());
+			this.goToDockService.updateCharacteristic(this.platform.Characteristic.On, this.getGoToDock());
 		}
 		if (this.dockStateService)
 		{
@@ -548,27 +590,4 @@ export class VacuumRobotAccessory extends AbstractRobot
 			this.scheduleService.updateCharacteristic(this.platform.Characteristic.On, await this.getSchedule());
 		}
 	}
-
-	private debug(debugType: DebugType, message: String)
-	{
-		switch (debugType)
-		{
-			case DebugType.ACTION:
-				this.log.debug("[" + this.robot.name + "] > " + message);
-				break;
-			case DebugType.STATUS:
-				this.log.debug("[" + this.robot.name + "] " + message);
-				break;
-			case DebugType.INFO:
-				this.log.debug("[" + this.robot.name + "] " + message);
-				break;
-		}
-	}
-}
-
-enum DebugType
-{
-	ACTION,
-	STATUS,
-	INFO
 }
