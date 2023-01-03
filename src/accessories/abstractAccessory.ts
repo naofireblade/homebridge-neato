@@ -5,10 +5,11 @@ import {CleanType, RobotService} from "../models/services";
 import {CharacteristicHandler} from "../characteristics/characteristicHandler";
 import {availableLocales, localize} from "../localization";
 import {ALL_SERVICES, LOCALE, PREFIX} from "../defaults";
+import {RobotModel} from "../models/robotModel";
 
-export class AbstractRobot
+export class AbstractAccessory
 {
-	protected robot: any; // Physicial robot
+	protected robot: RobotModel; // Physicial robot
 	protected log: Logger; // Homebridge Logger
 	protected cleanService?: Service; // Service for start cleaning
 	// protected readonly refresh: any; // ???
@@ -67,6 +68,7 @@ export class AbstractRobot
 			if (existingService && existingService.displayName === displayName)
 			{
 				service = existingService
+				this.log.debug("Already found service with same name: " + displayName)
 			}
 			else
 			{
@@ -74,8 +76,10 @@ export class AbstractRobot
 				{
 					// delete to reset display name in case of locale or prefix change
 					this.accessory.removeService(existingService);
+					this.log.debug("Already found service. Removing to update name: " + existingService.displayName)
 				}
 				service = this.accessory.addService(serviceType, displayName, serviceName);
+				this.log.debug("Added service: " + displayName)
 			}
 			characteristicHandlers.forEach(handlers => {
 				let characteristic = service.getCharacteristic(handlers.characteristic);
@@ -95,6 +99,11 @@ export class AbstractRobot
 			if (existingService)
 			{
 				this.accessory.removeService(existingService);
+				this.log.info("Removed service because its no longer configured: " + existingService.displayName)
+			}
+			else
+			{
+				this.log.info("Skipped service because its not configured: " + displayName)
 			}
 		}
 	}

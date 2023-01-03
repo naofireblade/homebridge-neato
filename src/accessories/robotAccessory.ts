@@ -8,9 +8,9 @@ import {CleanType, RobotService} from '../models/services';
 import {ALL_SERVICES, BACKGROUND_INTERVAL, LOCALE, PREFIX} from '../defaults';
 import {availableLocales, localize} from '../localization';
 import {CharacteristicHandler} from '../characteristics/characteristicHandler';
-import {AbstractRobot, DebugType} from "./abstractRobot";
+import {AbstractAccessory, DebugType} from "./abstractAccessory";
 
-export class VacuumRobotAccessory extends AbstractRobot
+export class RobotAccessory extends AbstractAccessory
 {
 	// Homebridge
 	private readonly batteryService?: Service;
@@ -24,9 +24,6 @@ export class VacuumRobotAccessory extends AbstractRobot
 	private readonly scheduleService?: Service;
 	private readonly spotCleanService?: Service;
 	private spotPlusFeatures: boolean;
-
-	// Context
-	private readonly options: Options;
 
 	// Config
 	private readonly backgroundUpdateInterval: number;
@@ -42,9 +39,9 @@ export class VacuumRobotAccessory extends AbstractRobot
 	{
 		super(platform, accessory, config);
 
-		this.options = accessory.context.options || new Options();
+		this.robot.options = accessory.context.options || new Options();
 		this.spotPlusFeatures = false;
-		this.backgroundUpdateInterval = VacuumRobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
+		this.backgroundUpdateInterval = RobotAccessory.parseBackgroundUpdateInterval(this.config['backgroundUpdate']);
 		this.isSpotCleaning = false;
 
 		// Information
@@ -133,15 +130,15 @@ export class VacuumRobotAccessory extends AbstractRobot
 			// Save/Load options
 			if (!accessory.context.options)
 			{
-				this.options.eco = this.robot.eco;
-				this.options.noGoLines = this.robot.noGoLines;
-				this.options.extraCare = this.robot.navigationMode == 2;
-				this.debug(DebugType.INFO, "Options initially set to eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: " + this.options.extraCare);
-				accessory.context.options = this.options;
+				this.robot.options.eco = this.robot.eco;
+				this.robot.options.noGoLines = this.robot.noGoLines;
+				this.robot.options.extraCare = this.robot.navigationMode == 2;
+				this.debug(DebugType.INFO, "Options initially set to eco: " + this.robot.options.eco + ", noGoLines: " + this.robot.options.noGoLines + ", extraCare: " + this.robot.options.extraCare);
+				accessory.context.options = this.robot.options;
 			}
 			else
 			{
-				this.debug(DebugType.INFO, "Options loaded from cache eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: " + this.options.extraCare);
+				this.debug(DebugType.INFO, "Options loaded from cache eco: " + this.robot.options.eco + ", noGoLines: " + this.robot.options.noGoLines + ", extraCare: " + this.robot.options.extraCare);
 			}
 		});
 	}
@@ -149,7 +146,7 @@ export class VacuumRobotAccessory extends AbstractRobot
 	private addSpotCleanCharacteristics()
 	{
 		// Only add characteristics if service is available ond characteristics are not added yet
-		if (this.spotCleanService != null && !this.options.spotCharacteristics)
+		if (this.spotCleanService != null && !this.robot.options.spotCharacteristics)
 		{
 			this.spotCleanService.addCharacteristic(spotRepeat(this.platform.Characteristic))
 					.onGet(this.getSpotRepeat.bind(this))
@@ -165,11 +162,11 @@ export class VacuumRobotAccessory extends AbstractRobot
 						.onGet(this.getSpotHeight.bind(this))
 						.onSet(this.setSpotHeight.bind(this));
 			}
-			this.options.spotCharacteristics = true;
+			this.robot.options.spotCharacteristics = true;
 		}
 		else if (this.spotCleanService == null)
 		{
-			this.options.spotCharacteristics = false;
+			this.robot.options.spotCharacteristics = false;
 		}
 	}
 
@@ -385,68 +382,68 @@ export class VacuumRobotAccessory extends AbstractRobot
 
 	getEco()
 	{
-		return this.options.eco;
+		return this.robot.options.eco;
 	}
 
 	setEco(on: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set ECO: " + on);
-		this.options.eco = <boolean>on;
+		this.robot.options.eco = <boolean>on;
 	}
 
 	getExtraCare()
 	{
-		return this.options.extraCare;
+		return this.robot.options.extraCare;
 	}
 
 	setExtraCare(on: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set EXTRA CARE: " + on);
-		this.options.extraCare = <boolean>on;
+		this.robot.options.extraCare = <boolean>on;
 	}
 
 	getNoGoLines()
 	{
-		return this.options.noGoLines;
+		return this.robot.options.noGoLines;
 	}
 
 	setNoGoLines(on: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set NOGO LINES: " + on);
-		this.options.noGoLines = <boolean>on;
+		this.robot.options.noGoLines = <boolean>on;
 	}
 
 	getSpotRepeat()
 	{
-		return this.options.spotRepeat;
+		return this.robot.options.spotRepeat;
 	}
 
 	setSpotRepeat(on: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set SPOT REPEAT: " + on);
-		this.options.spotRepeat = <boolean>on;
+		this.robot.options.spotRepeat = <boolean>on;
 	}
 
 	getSpotWidth()
 	{
-		return this.options.spotWidth;
+		return this.robot.options.spotWidth;
 	}
 
 	setSpotWidth(length: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set SPOT WIDTH: " + length + " cm");
-		this.options.spotWidth = <number>length;
+		this.robot.options.spotWidth = <number>length;
 	}
 
 	getSpotHeight()
 	{
-		return this.options.spotHeight;
+		return this.robot.options.spotHeight;
 	}
 
 	setSpotHeight(length: CharacteristicValue)
 	{
 		this.debug(DebugType.STATUS, "Set SPOT HEIGHT: " + length + " cm");
-		this.options.spotHeight = <number>length;
+		this.robot.options.spotHeight = <number>length;
 	}
 
 	getFindMe()
@@ -487,18 +484,18 @@ export class VacuumRobotAccessory extends AbstractRobot
 		}, 2 * 60 * 1000);
 
 		this.log.info(
-				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.options.eco + ", noGoLines: " + this.options.noGoLines + ", extraCare: "
-				+ this.options.extraCare);
+				"[" + this.robot.name + "] > Start cleaning with options type: " + CleanType[cleanType] + ", eco: " + this.robot.options.eco + ", noGoLines: " + this.robot.options.noGoLines + ", extraCare: "
+				+ this.robot.options.extraCare);
 
 		try
 		{
 			switch (cleanType)
 			{
 				case CleanType.ALL:
-					await this.robot.startCleaning(this.options.eco, this.options.extraCare ? 2 : 1, this.options.noGoLines);
+					await this.robot.startCleaning(this.robot.options.eco, this.robot.options.extraCare ? 2 : 1, this.robot.options.noGoLines);
 					break;
 				case CleanType.SPOT:
-					await this.robot.startSpotCleaning(this.options.eco, this.options.spotWidth, this.options.spotHeight, this.options.spotRepeat, this.options.extraCare ? 2 : 1);
+					await this.robot.startSpotCleaning(this.robot.options.eco, this.robot.options.spotWidth, this.robot.options.spotHeight, this.robot.options.spotRepeat, this.robot.options.extraCare ? 2 : 1);
 					break;
 			}
 		}

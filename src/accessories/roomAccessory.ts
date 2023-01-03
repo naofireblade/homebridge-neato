@@ -1,9 +1,9 @@
 import {CharacteristicValue, Logger, PlatformAccessory, PlatformAccessoryEvent, PlatformConfig, Service, WithUUID} from 'homebridge';
 import {HomebridgeNeatoPlatform} from '../homebridgeNeatoPlatform';
-import {RobotService} from "../models/services";
-import {AbstractRobot} from "./abstractRobot";
+import {CleanType, RobotService} from "../models/services";
+import {AbstractAccessory} from "./abstractAccessory";
 
-export class RoomRobotAccessory extends AbstractRobot
+export class RoomAccessory extends AbstractAccessory
 {
 	// Context
 	private room: any;
@@ -34,14 +34,13 @@ export class RoomRobotAccessory extends AbstractRobot
 	{
 		try
 		{
-			// TODO check if robot is still running, if not, set this.isCleaning to false and return false
-			return false;
-			// await this.updateRobot();
-			// return this.robot.canPause;
+			await this.robot.getState(() => {});
+			this.isCleaning = this.robot.canPause;
+			return this.robot.canPause;
 		}
 		catch (error)
 		{
-			this.log.error("[" + this.robot.name + "]Cannot get cleaning status: " + error);
+			this.log.error("[" + this.robot.name + "] Cannot get room cleaning status: " + error);
 			throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 		}
 	}
@@ -56,7 +55,11 @@ export class RoomRobotAccessory extends AbstractRobot
 			// Start
 			if (on)
 			{
-				// TODO start or queue room cleaning
+				this.log.info(
+						"[" + this.robot.name + "] > Start cleaning room: " + [this.room.name] + " (" + this.room.id + ") with options eco: " + this.robot.options.eco + ", extraCare: "
+						+ this.robot.options.extraCare);
+				await this.robot.startCleaningBoundary(this.robot.options.eco, this.robot.options.extraCare ? 2 : 1, this.room.id);
+
 				this.isCleaning = true;
 			}
 			// Stop

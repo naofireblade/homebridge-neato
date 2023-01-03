@@ -3,12 +3,14 @@ export enum CleanType {
   SPOT,
 }
 
+// TODO Add 'services' instead of 'hidden' to config readme and schema.json
+
 export enum RobotService {
   CLEAN = "clean",
   CLEAN_SPOT = "cleanSpot",
   CLEAN_ZONE = "cleanZone",
   GO_TO_DOCK = "goToDock",
-  DOCKED = "dockState",
+  DOCKED = "docked",
   BIN_FULL = "binFull",
   FIND_ME = "findMe",
   SCHEDULE = "schedule",

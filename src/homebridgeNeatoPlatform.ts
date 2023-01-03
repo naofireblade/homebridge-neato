@@ -1,8 +1,9 @@
 import {API, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service} from "homebridge";
 import NeatoApi from "node-botvac";
 import {PLATFORM_NAME, PLUGIN_NAME} from "./settings";
-import {VacuumRobotAccessory} from "./accessories/vacuumRobotAccessory";
-import {RoomRobotAccessory} from "./accessories/roomRobotAccessory";
+import {RobotAccessory} from "./accessories/robotAccessory";
+import {RoomAccessory} from "./accessories/roomAccessory";
+import {RobotModel} from "./models/robotModel";
 
 /**
  * HomebridgePlatform
@@ -16,6 +17,9 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 
 	// this is used to track restored cached accessories
 	public readonly cachedRobotAccessories: PlatformAccessory[] = [];
+	
+	// Keep all physical robots
+	private robots: RobotModel[] = [];
 
 	constructor(
 			public readonly log: Logger,
@@ -40,7 +44,6 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 	async discoverRobots()
 	{
 		const client = new NeatoApi.Client();
-		let robots;
 
 		// Login
 		try
@@ -72,7 +75,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 					resolve(data)
 				})
 			}).then(result => {
-				robots = result
+				this.robots = <RobotModel[]>result;
 			});
 		}
 		catch (error)
@@ -87,13 +90,13 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		}
 
 		// Count Neato robots in account
-		if (robots.length === 0)
+		if (this.robots.length === 0)
 		{
 			this.log.error("Neato account has no robots. Did you add your robot here: https://neatorobotics.com/my-neato/ ?");
 		}
 		else
 		{
-			this.log.info("Neato account has " + robots.length + " robot" + (robots.length === 1 ? "." : "s."));
+			this.log.info("Neato account has " + this.robots.length + " robot" + (this.robots.length === 1 ? "." : "s."));
 		}
 
 		// Count Neato robots in cache
@@ -102,14 +105,14 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 		this.log.debug("Plugin cache has " + robotSize + " robot" + (robotSize === 1 ? "" : "s") + " and " + roomSize + " room" + (roomSize === 1 ? "." : "s."));
 
 		// Look for all account robots in cache
-		for (let robot of robots)
+		for (let robot of this.robots)
 		{
 			this.log.debug("[" + robot.name + "] Found robot.");
 			let uuid = this.api.hap.uuid.generate(robot._serial);
-			let cachedRobot = this.cachedRobotAccessories.find(r => uuid === r.UUID);
-			if (cachedRobot)
+			let cachedRobotAccessory = this.cachedRobotAccessories.find(r => uuid === r.UUID);
+			if (cachedRobotAccessory)
 			{
-				cachedRobot.context.found = true;
+				cachedRobotAccessory.context.found = true;
 			}
 
 			let state;
@@ -141,7 +144,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 				robot.availableServices = state.availableServices;
 
 				// Update existing robot accessory
-				if (cachedRobot)
+				if (cachedRobotAccessory)
 				{
 					this.log.info("[" + robot.name + "] Loaded robot " + robot.name + " from cache.");
 
@@ -152,9 +155,9 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						await this.loadRooms(robot, floorplan)
 					}
 
-					cachedRobot.context.robot = robot;
-					this.api.updatePlatformAccessories([cachedRobot]);
-					new VacuumRobotAccessory(this, cachedRobot, this.config);
+					cachedRobotAccessory.context.robot = robot;
+					this.api.updatePlatformAccessories([cachedRobotAccessory]);
+					new RobotAccessory(this, cachedRobotAccessory, this.config);
 					this.log.debug("[" + robot.name + "] Updated robot " + robot.name + " from neato account.");
 				}
 				// Create new robot accessory
@@ -167,10 +170,10 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						await this.loadRooms(robot, floorplan)
 					}
 
-					const newRobot = new this.api.platformAccessory(robot.name, uuid);
-					newRobot.context.robot = robot;
-					new VacuumRobotAccessory(this, newRobot, this.config);
-					this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRobot]);
+					const newRobotAccessory = new this.api.platformAccessory(robot.name, uuid);
+					newRobotAccessory.context.robot = robot;
+					new RobotAccessory(this, newRobotAccessory, this.config);
+					this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRobotAccessory]);
 					this.log.info("[" + robot.name + "] Added new robot from neato account.");
 				}
 			}
@@ -258,7 +261,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						cachedRoom.context.found = true;
 						cachedRoom.context.robot = robot;
 						this.log.info("[" + robot.name + "] Loaded room " + room.name + " from cache.");
-						new RoomRobotAccessory(this, cachedRoom, this.config);
+						new RoomAccessory(this, cachedRoom, this.config);
 						this.api.updatePlatformAccessories([cachedRoom]);
 						this.log.debug("[" + robot.name + "] Updated room " + room.name + " from neato account.");
 					}
@@ -267,7 +270,7 @@ export class HomebridgeNeatoPlatform implements DynamicPlatformPlugin
 						const newRoom = new this.api.platformAccessory(room.name, uuid);
 						newRoom.context.room = room;
 						newRoom.context.robot = robot;
-						new RoomRobotAccessory(this, newRoom, this.config);
+						new RoomAccessory(this, newRoom, this.config);
 						this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newRoom]);
 						this.log.info("[" + robot.name + "] Added room " + room.name + ".");
 					}
